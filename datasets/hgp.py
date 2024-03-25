@@ -133,7 +133,7 @@ def make_transforms(image_set):
     raise ValueError(f'unknown {image_set}')
 
 def build_hgp(image_set):
-    root = Path('../datasets/HGP')
+    root = Path('./HGP')
     mode = 'instances'
     assert root.exists(), f'provided path {root} does not exist'
     PATHS = {
