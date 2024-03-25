@@ -1,3 +1,8 @@
+example bash: python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --device cpu --dataset_file hgp
+
+conda env: conda create -n "detr" python=3.11 conda-forge::cython conda-forge::pycocotools pytorch::pytorch pytorch::torchvision conda-forge::scipy
+
+
 **DE⫶TR**: End-to-End Object Detection with Transformers
 ========
 
