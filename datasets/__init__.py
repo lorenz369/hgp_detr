@@ -35,14 +35,8 @@ def build_dataset(image_set, args):
     raise ValueError(f'dataset {args.dataset_file} not supported')
 
 def build_evaluator(base_ds, iou_types):
-    print("base_ds", base_ds)
-    print("isinstance(base_ds, HGP)", isinstance(base_ds, HGP))
-    print("isinstance(base_ds, torchvision.datasets.CocoDetection)", isinstance(base_ds, torchvision.datasets.CocoDetection))
-    print("type(base_ds)", type(base_ds))  
     if isinstance(base_ds, HGP):
-        print("HGPEvaluator")
         return HGPEvaluator(base_ds, iou_types)
     if isinstance(base_ds, torchvision.datasets.CocoDetection):
-        print("CocoEvaluator")
         return CocoEvaluator(base_ds, iou_types)
     raise NotImplementedError(f"no evaluator for {base_ds}")
