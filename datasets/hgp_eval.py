@@ -1,8 +1,18 @@
+# --------------------------------------------------------------------------------
+# Modified by Marco Lorenz on April 2nd, 2024.
+# Modified copy paste from coco_eval.py
+# HGP evaluator that works in distributed mode.
+# Changes made: Support of the HGP dataset by introducing the HGPEvaluator class
+# Hands, Guns and Phones dataset: https://paperswithcode.com/dataset/hgp
+# This modification is made under the terms of the Apache License 2.0, which is the license
+# originally associated with this file. All original copyright, patent, trademark, and
+# attribution notices from the Source form of the Work have been retained, excluding those 
+# notices that do not pertain to any part of the Derivative Works.
+# --------------------------------------------------------------------------------
+
+
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
-Modified copy paste from coco_eval.py
-HGP evaluator that works in distributed mode.
-
 Mostly copy-paste from https://github.com/pytorch/vision/blob/edfd5a7/references/detection/coco_eval.py
 The difference is that there is less copy-pasting from pycocotools
 in the end of the file, as python3 can suppress prints with contextlib

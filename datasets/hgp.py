@@ -1,7 +1,16 @@
+# --------------------------------------------------------------------------------
+# Modified by Marco Lorenz on April 2nd, 2024.
+# Custom dataset for HGP dataset. Mostly copy-paste from coco.py
+# Changes made: Support of the HGP dataset for the DETR model by introducing the HGPDetection class
+# Hands, Guns and Phones dataset: https://paperswithcode.com/dataset/hgp
+# This modification is made under the terms of the Apache License 2.0, which is the license
+# originally associated with this file. All original copyright, patent, trademark, and
+# attribution notices from the Source form of the Work have been retained, excluding those 
+# notices that do not pertain to any part of the Derivative Works.
+# --------------------------------------------------------------------------------
+
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
-Custom dataset for HGP dataset.
-
 Mostly copy-paste from https://github.com/pytorch/vision/blob/13b35ff/references/detection/coco_utils.py
 """
 from pathlib import Path

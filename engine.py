@@ -1,3 +1,14 @@
+# --------------------------------------------------------------------------------
+# Modified by Marco Lorenz on April 2nd, 2024.
+# Changes made: Added support of the Hands, Guns and Phones dataset (HGP), including the following
+# - import of the build_evaluator method to support the HGP dataset in line 24
+# - call of the build_evaluator method to support the HGP dataset in line 88
+# This modification is made under the terms of the Apache License 2.0, which is the license
+# originally associated with this file. All original copyright, patent, trademark, and
+# attribution notices from the Source form of the Work have been retained, excluding those 
+# notices that do not pertain to any part of the Derivative Works.
+# --------------------------------------------------------------------------------
+
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 Train and eval functions used in main.py
@@ -10,7 +21,7 @@ from typing import Iterable
 import torch
 
 import util.misc as utils
-from datasets.__init__ import build_evaluator
+from datasets.__init__ import build_evaluator # Added by Marco Lorenz on April 2nd, 2024
 from datasets.panoptic_eval import PanopticEvaluator
 
 
@@ -74,8 +85,8 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
     header = 'Test:'
 
     iou_types = tuple(k for k in ('segm', 'bbox') if k in postprocessors.keys())
-    coco_evaluator = build_evaluator(base_ds, iou_types)
-    # coco_evaluator.coco_eval[iou_types[0]].params.iouThrs = [0, 0.1, 0.5, 0.75]
+    coco_evaluator = build_evaluator(base_ds, iou_types) # Modified by Marco Lorenz on April 2nd, 2024
+    coco_evaluator.coco_eval[iou_types[0]].params.iouThrs = [0, 0.1, 0.5, 0.75]
 
     panoptic_evaluator = None
     if 'panoptic' in postprocessors.keys():

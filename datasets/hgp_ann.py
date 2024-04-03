@@ -1,4 +1,14 @@
-# Modified copy paste from pycocotools/coco.py
+# --------------------------------------------------------------------------------
+# Created by Marco Lorenz on April 2nd, 2024.
+# Custom implementation of the pycocotools/coco.py class for the Hands, Guns and Phones dataset.
+# This file consists of modified copy paste of the original pycocotools/coco.py class.
+# This modification is made under the terms of the license originally associated with this file. 
+# See cocodataset/cocoapi/license.txt
+# Hands, Guns and Phones dataset: https://paperswithcode.com/dataset/hgp
+# All original copyright, patent, trademark, and
+# attribution notices from the Source form of the Work have been retained, excluding those 
+# notices that do not pertain to any part of the Derivative Works.
+# --------------------------------------------------------------------------------
 
 # __author__ = 'tylin'
 # __version__ = '2.0'
@@ -16,7 +26,7 @@
 # captions not all functions are defined (e.g. categories are undefined).
 
 # The following API functions are defined:
-#  COCO       - COCO api class that loads COCO annotation file and prepare data structures.
+#  HGP       - HGP api class that loads COCO annotation file and prepare data structures.
 #  decodeMask - Decode binary mask M encoded via run-length encoding.
 #  encodeMask - Encode binary mask M using run-length encoding.
 #  getAnnIds  - Get ann ids that satisfy given filter conditions.
