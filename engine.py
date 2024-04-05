@@ -1,8 +1,10 @@
 # --------------------------------------------------------------------------------
-# Modified by Marco Lorenz on April 2nd, 2024.
-# Changes made: Added support of the Hands, Guns and Phones dataset (HGP), including the following
+# Modified by Marco Lorenz on April 2nd and 4th, 2024.
+# Changes made: 
+# Added support of the Hands, Guns and Phones dataset (HGP), including the following
 # - import of the build_evaluator method to support the HGP dataset in line 24
 # - call of the build_evaluator method to support the HGP dataset in line 88
+# Added nvtx annotations for profiling with NVIDIA Nsight Systems
 # This modification is made under the terms of the Apache License 2.0, which is the license
 # originally associated with this file. All original copyright, patent, trademark, and
 # attribution notices from the Source form of the Work have been retained, excluding those 
@@ -23,6 +25,8 @@ import torch
 import util.misc as utils
 from datasets.__init__ import build_evaluator # Added by Marco Lorenz on April 2nd, 2024
 from datasets.panoptic_eval import PanopticEvaluator
+
+from nvtx import annotate # Added by Marco Lorenz on April 4th, 2024
 
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
@@ -61,10 +65,12 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             sys.exit(1)
 
         optimizer.zero_grad()
-        losses.backward()
+        with annotate("backward"): # Added by Marco Lorenz on April 4th, 2024
+            losses.backward()
         if max_norm > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
-        optimizer.step()
+        with annotate("optimizer_step"): # Added by Marco Lorenz on April 4th, 2024
+            optimizer.step()
 
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
