@@ -1,5 +1,5 @@
 # --------------------------------------------------------------------------------
-# Modified by Marco Lorenz on April 2nd and 4th, 2024.
+# Modified by Marco Lorenz in April 2024.
 # Changes made: 
 # Added support of the Hands, Guns and Phones dataset (HGP), including the following
 # - import of the build_evaluator method to support the HGP dataset in line 24
@@ -44,9 +44,11 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        outputs = model(samples)
-        loss_dict = criterion(outputs, targets)
-        weight_dict = criterion.weight_dict
+        with annotate("forward"): # Added by Marco Lorenz on April 8th, 2024
+            outputs = model(samples)
+        with annotate("loss"): # Added by Marco Lorenz on April 8th, 2024
+            loss_dict = criterion(outputs, targets)
+            weight_dict = criterion.weight_dict
         losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
 
         # reduce losses over all GPUs for logging purposes
