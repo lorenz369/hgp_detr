@@ -1,6 +1,72 @@
 example bash: python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --device cpu --dataset_file hgp
 
-conda env: conda create -n "detr" python=3.11 conda-forge::cython conda-forge::pycocotools pytorch::pytorch pytorch::torchvision conda-forge::scipy
+Perlmutter:
+  initial:
+    ssh marcolz@saul.nersc.gov
+    conda create -n "detr_12.2" python cython pycocotools pytorch torchvision pytorch scipy conda-forge::nvtx -c pytorch -c nvidia
+
+  recurring:
+    module load conda
+    conda activate detr_12.2
+    cd DETR/hgp_detr
+
+
+
+  1 GPU:
+    salloc --nodes 1 --gpus=1 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
+    export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+    export MASTER_PORT=12345
+    dcgmi profile -–pause
+    export OMP_NUM_THREADS=64  # Adjust the number 64 according to your system's capability
+    
+
+    srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU1_/nsys/nsys_report_annotated
+    srun ncu --nvtx --nvtx-include --kernel-id :::1 --export=../gpu_reports/perlmutter/GPU1/ncu/ncu_report_gpu_ann
+    python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
+    | tee ../output/perlmutter_1gpu.txt  
+
+  2 GPUs:
+    salloc --nodes 1 --gpus=2 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
+    cd DETR/hgp_detr
+    export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+    export MASTER_PORT=12345
+    export OMP_NUM_THREADS=64  # Adjust the number 64 according to your system's capability
+
+    srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU2_/nsys_report
+    srun ncu --nvtx --kernel-id :::1 --export=../gpu_reports/perlmutter/GPU2_/ncu/ncu_report_gpu_ann
+    python -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp 
+    | tee ../output/perlmutter_2gpus_.txt
+
+Nsight Systems:
+  nsys-ui report_name.nsys-rep
+    
+
+helpful commands: 
+  tee, screen or tmux
+  rsync -avz mlorenz@ceg-octane:/home/mlorenz/output /Users/marcolorenz/Programming/DETR
+  rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/perlmutter/GPU1 /Users/marcolorenz/Programming/DETR/gpu_reports/perlmutter
+
+octane: 
+  ssh octane
+  initial:
+    git clone https://github.com/lorenz369/hgp_detr.git
+    git clone https://github.com/lorenz369/gpu_reports.git
+
+  conda env brook/dev:
+    conda create --name detr_clone --clone base #for brook and dev
+    conda activate detr_clone
+    conda install conda-forge::pycocotools
+
+  e.g. brook:
+    module load anaconda/3
+    module load cuda/11.4
+    srun -p brook -N 1 --gres=gpu:1 --cpus-per-task 1 --mem 4G --pty bash -i
+    conda activate detr_clone
+    cd hgp_detr/
+    export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+    export MASTER_PORT=12345
+    nsys profile -o ../output/nsys2 --stats=true python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --num_workers 1 --dataset_file hgp 
+    | tee ../output/output.txt
 
 
 **DE⫶TR**: End-to-End Object Detection with Transformers
