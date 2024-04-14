@@ -1,3 +1,12 @@
+# --------------------------------------------------------------------------------
+# Modified by Marco Lorenz on April 13th, 2024.
+# Added support of CPU training on Perlmutter.
+# This modification is made under the terms of the Apache License 2.0, which is the license
+# originally associated with this file. All original copyright, patent, trademark, and
+# attribution notices from the Source form of the Work have been retained, excluding those 
+# notices that do not pertain to any part of the Derivative Works.
+# --------------------------------------------------------------------------------
+
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 Misc functions, including distributed helpers.
@@ -409,7 +418,7 @@ def init_distributed_mode(args):
         args.rank = int(os.environ["RANK"])
         args.world_size = int(os.environ['WORLD_SIZE'])
         args.gpu = int(os.environ['LOCAL_RANK'])
-    elif 'SLURM_PROCID' in os.environ:
+    elif 'SLURM_PROCID' in os.environ and args.device != 'cpu': # Modified by Marco Lorenz on April 13th, 2024
         args.rank = int(os.environ['SLURM_PROCID'])
         args.gpu = args.rank % torch.cuda.device_count()
     else:
