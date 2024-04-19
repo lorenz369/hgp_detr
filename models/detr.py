@@ -1,5 +1,5 @@
 # --------------------------------------------------------------------------------
-# Modified by Marco Lorenz on April 8th, 2024.
+# Modified by Marco Lorenz on April 8th and 19th, 2024.
 # Added nvtx annotations for profiling with NVIDIA Nsight Systems
 # This modification is made under the terms of the Apache License 2.0, which is the license
 # originally associated with this file. All original copyright, patent, trademark, and
@@ -133,7 +133,8 @@ class SetCriterion(nn.Module):
                                     dtype=torch.int64, device=src_logits.device)
         target_classes[idx] = target_classes_o
 
-        loss_ce = F.cross_entropy(src_logits.transpose(1, 2), target_classes, self.empty_weight)
+        with annotate("loss_classes"): # Added by Marco Lorenz on April 19th, 2024
+            loss_ce = F.cross_entropy(src_logits.transpose(1, 2), target_classes, self.empty_weight)
         losses = {'loss_ce': loss_ce}
 
         if log:
@@ -166,7 +167,7 @@ class SetCriterion(nn.Module):
         src_boxes = outputs['pred_boxes'][idx]
         target_boxes = torch.cat([t['boxes'][i] for t, (_, i) in zip(targets, indices)], dim=0)
 
-        with annotate("loss_boxes"): # Added by Marco Lorenz on April 8th, 2024
+        with annotate("loss_l1"): # Added by Marco Lorenz on April 8th, 2024
             loss_bbox = F.l1_loss(src_boxes, target_boxes, reduction='none')
 
         losses = {}
