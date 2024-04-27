@@ -205,13 +205,13 @@ def main(args):
         if args.distributed:
             sampler_train.set_epoch(epoch)
 
-        if epoch == 0:
+        if epoch == args.start_epoch:
             rng = nvtx.start_range(message="my_message", color="pink") # Added by Marco Lorenz on April 12th, 2024
-            train_stats = train_one_epoch(
-                model, criterion, data_loader_train, optimizer, device, epoch,
-                args.clip_max_norm)
+        train_stats = train_one_epoch(
+            model, criterion, data_loader_train, optimizer, device, epoch,
+            args.clip_max_norm)
         lr_scheduler.step()
-        if epoch == 0:
+        if epoch == args.start_epoch:
             nvtx.end_range(rng) # Added by Marco Lorenz on April 12th, 2024
 
         
