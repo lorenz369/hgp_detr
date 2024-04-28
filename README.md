@@ -33,17 +33,17 @@ python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --d
 | --lr_drop    | Learning rate drop after epoch    | 200    |
 | ----clip_max_norm   | Gradient clipping max norm    | 0.1    |
 
-Model parameters
+| Model parameters | explanation | default |
 | --------------- | --------------- | --------------- |
 | --frozen_weights    | Path to the pretrained model. If set, only the mask head will be trained    | None |
 
-Backbone
+| Backbone | explanation | default |
 | --------------- | --------------- | --------------- |
 | --backbone    | Name of the convolutional backbone to use    | resnet50    |
 | --dilation    | If true, we replace stride with dilation in the last convolutional block (DC5)    | False    |
 | --position_embedding    | Type of positional embedding to use on top of the image features    | Row 1 Cell 2    |
 
-Transformer
+| Transformer | explanation | default |
 | --------------- | --------------- | --------------- |
 | --enc_layers    | Number of encoding layers in the transformer    | 6    |
 | --dec_layers    | Number of decoding layers in the transformer    | 6    |
@@ -54,23 +54,23 @@ Transformer
 | --num_queries    | Number of query slots    | 100    |
 | --pre_norm    | Pre-Normalizattion before transformer layers    | False    |
 
-Loss
+| Loss | explanation | default |
 | --------------- | --------------- | --------------- |
 | --no_aux_loss    | Disables auxiliary decoding losses (loss at each layer)   | False    |
 
-Matcher
+Matcher | explanation | default |
 | --------------- | --------------- | --------------- |
 | --set_cost_class    | Class coefficient in the matching cost    | 1    |
 | --set_cost_bbox    | L1 box coefficient in the matching cost    | 5    |
 | --set_cost_giou    | giou box coefficient in the matching cost    | 2    |
 
-Loss coefficients
+| Loss coefficients | explanation | default |
 | --------------- | --------------- | --------------- |
 | --bbox_loss_coef    | Coefficient of the bbox in the loss    | Row 2 Cell 2    |
 | --giou_loss_coef    | giou coefficient in the loss    | Row 3 Cell 2    |
 | --eos_coef    | Relative classification weight of the no-object class    | 0.1    |
 
-Dataset parameters
+| Dataset parameters | explanation | default |
 | --------------- | --------------- | --------------- |
 | --dataset_file      | Path to the dataset  | coco   |
 | --output_dir    | path where to save, empty for no saving   | ''   |
@@ -81,7 +81,7 @@ Dataset parameters
 | --eval    | Evaluation    | False    |
 | --num_workers    | num_workers    | 2    |
 
-Distributed training parameters
+| Distributed training parameters | explanation | default |
 | --------------- | --------------- | --------------- |
 | --world_size    | number of distributed processes    | 1    |
 | --dist_url    | url used to set up distributed training    | 'env://'    |
