@@ -34,14 +34,17 @@ python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --d
 | ----clip_max_norm   | Gradient clipping max norm    | 0.1    |
 
 Model parameters
+| --------------- | --------------- | --------------- |
 | --frozen_weights    | Path to the pretrained model. If set, only the mask head will be trained    | None |
 
 Backbone
+| --------------- | --------------- | --------------- |
 | --backbone    | Name of the convolutional backbone to use    | resnet50    |
 | --dilation    | If true, we replace stride with dilation in the last convolutional block (DC5)    | False    |
 | --position_embedding    | Type of positional embedding to use on top of the image features    | Row 1 Cell 2    |
 
 Transformer
+| --------------- | --------------- | --------------- |
 | --enc_layers    | Number of encoding layers in the transformer    | 6    |
 | --dec_layers    | Number of decoding layers in the transformer    | 6    |
 | --dim_feedforward    | Intermediate size of the feedforward layers in the transformer blocks    | 2048    |
@@ -52,19 +55,23 @@ Transformer
 | --pre_norm    | Pre-Normalizattion before transformer layers    | False    |
 
 Loss
+| --------------- | --------------- | --------------- |
 | --no_aux_loss    | Disables auxiliary decoding losses (loss at each layer)   | False    |
 
 Matcher
+| --------------- | --------------- | --------------- |
 | --set_cost_class    | Class coefficient in the matching cost    | 1    |
 | --set_cost_bbox    | L1 box coefficient in the matching cost    | 5    |
 | --set_cost_giou    | giou box coefficient in the matching cost    | 2    |
 
 Loss coefficients
+| --------------- | --------------- | --------------- |
 | --bbox_loss_coef    | Coefficient of the bbox in the loss    | Row 2 Cell 2    |
 | --giou_loss_coef    | giou coefficient in the loss    | Row 3 Cell 2    |
 | --eos_coef    | Relative classification weight of the no-object class    | 0.1    |
 
 Dataset parameters
+| --------------- | --------------- | --------------- |
 | --dataset_file      | Path to the dataset  | coco   |
 | --output_dir    | path where to save, empty for no saving   | ''   |
 | --device    | device to use for training / testing    | cuda    |
@@ -75,6 +82,7 @@ Dataset parameters
 | --num_workers    | num_workers    | 2    |
 
 Distributed training parameters
+| --------------- | --------------- | --------------- |
 | --world_size    | number of distributed processes    | 1    |
 | --dist_url    | url used to set up distributed training    | 'env://'    |
 
