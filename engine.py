@@ -26,6 +26,7 @@ import util.misc as utils
 from datasets.__init__ import build_evaluator # Added by Marco Lorenz on April 2nd, 2024
 from datasets.panoptic_eval import PanopticEvaluator
 
+import nvtx # Added by Marco Lorenz on April 12th, 2024
 from nvtx import annotate # Added by Marco Lorenz on April 4th, 2024
 
 
@@ -43,6 +44,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        
+        rng = nvtx.start_range(message="epoch", color="pink") # Added by Marco Lorenz on April 12th, 2024
 
         with annotate("forward"): # Added by Marco Lorenz on April 8th, 2024
             outputs = model(samples)
@@ -73,6 +76,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
         with annotate("optimizer_step"): # Added by Marco Lorenz on April 4th, 2024
             optimizer.step()
+
+        nvtx.end_range(rng) # Added by Marco Lorenz on April 12th, 2024
 
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
