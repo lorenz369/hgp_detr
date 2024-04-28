@@ -45,7 +45,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         
-        rng = nvtx.start_range(message="epoch", color="pink") # Added by Marco Lorenz on April 12th, 2024
+        rng = nvtx.start_range(message="batch", color="pink") # Added by Marco Lorenz on April 12th, 2024
 
         with annotate("forward"): # Added by Marco Lorenz on April 8th, 2024
             outputs = model(samples)
