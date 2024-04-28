@@ -1,72 +1,180 @@
-example bash: python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --device cpu --dataset_file hgp
+# Usage - Object detection
+There are no extra compiled components in DETR and package dependencies are minimal,
+so the code is very simple to use. We provide instructions how to install dependencies via conda.
+First, clone the repository locally:
+```
+git clone https://github.com/facebookresearch/detr.git
+```
+Then, install PyTorch 1.5+ and torchvision 0.6+:
+```
+conda install -c pytorch pytorch torchvision
+```
+Install pycocotools (for evaluation on COCO) and scipy (for training):
+```
+conda install cython scipy
+pip install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
+```
+That's it, should be good to train and evaluate detection models.
 
-Perlmutter:
-  initial:
-    ssh marcolz@saul.nersc.gov
-    conda create -n "detr_12.2" python cython pycocotools pytorch torchvision pytorch scipy conda-forge::nvtx -c pytorch -c nvidia
+To run:
+```
+python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --device cpu --dataset_file hgp
+```
 
-  recurring:
-    module load conda
-    conda activate detr_12.2
-    cd DETR/hgp_detr
+Argument Help
+
+| Flag | explanation | default |
+| --------------- | --------------- | --------------- |
+| --lr    | Learning rate transformer    | 1e-4    |
+| --lr_backbone    | Learning rate backbone    | 1e-5    |
+| --batch_size    | Batch size    | 2    |
+| --weight_decay    | Weight decay    | 1e-4    |
+| --epochs    | Training epochs   | 300    |
+| --lr_drop    | Learning rate drop after epoch    | 200    |
+| ----clip_max_norm   | Gradient clipping max norm    | 0.1    |
+
+| --frozen_weights    | Path to the pretrained model. If set, only the mask head will be trained    | None |
+| --backbone    | Name of the convolutional backbone to use    | resnet50    |
+| --dilation    | If true, we replace stride with dilation in the last convolutional block (DC5)    | False    |
+| --position_embedding    | Type of positional embedding to use on top of the image features    | Row 1 Cell 2    |
+
+| --enc_layers    | Number of encoding layers in the transformer    | 6    |
+| --dec_layers    | Number of decoding layers in the transformer    | 6    |
+| --dim_feedforward    | Intermediate size of the feedforward layers in the transformer blocks    | 2048    |
+| --hidden_dim    | Size of the embeddings (dimension of the transformer)    | 256    |
+| --dropout    | Dropout applied in the transformer    | 0.1    |
+| --nheads    | Number of attention heads inside the transformer's attentions    | 8    |
+| --num_queries    | Number of query slots    | 100    |
+| --pre_norm    | Pre-Normalizattion before transformer layers    | False    |
+
+| --no_aux_loss    | Disables auxiliary decoding losses (loss at each layer)   | False    |
+
+| --set_cost_class    | Class coefficient in the matching cost    | 1    |
+| --set_cost_bbox    | L1 box coefficient in the matching cost    | 5    |
+| --set_cost_giou    | giou box coefficient in the matching cost    | 2    |
+
+| --bbox_loss_coef    | Coefficient of the bbox in the loss    | Row 2 Cell 2    |
+| --giou_loss_coef    | giou coefficient in the loss    | Row 3 Cell 2    |
+| --eos_coef    | Relative classification weight of the no-object class    | 0.1    |
+
+| --dataset_file      | Path to the dataset  | coco   |
+
+| --output_dir    | path where to save, empty for no saving   | ''   |
+| --device    | device to use for training / testing    | cuda    |
+| --seed    | Seed for reproduceability    | 42    |
+| --resume    | resume from checkpoint    | ''    |
+| --start_epoch    | start epoch    | 0    |
+| --eval    | Evaluation    | False    |
+| --num_workers    | num_workers    | 2    |
+
+| --world_size    | number of distributed processes    | 1    |
+| --dist_url    | url used to set up distributed training    | 'env://'    |
 
 
+# Perlmutter
 
-  1 GPU:
-    salloc --nodes 1 --gpus=1 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
-    export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
-    export MASTER_PORT=12345
-    dcgmi profile -–pause
-    export OMP_NUM_THREADS=64  # Adjust the number 64 according to your system's capability
+## initial:
+```
+ssh marcolz@saul.nersc.gov
+conda create -n "detr_12.2" python cython pycocotools pytorch torchvision pytorch scipy conda-forge::nvtx -c pytorch -c nvidia
+git clone https://github.com/lorenz369/hgp_detr.git
+git clone https://github.com/lorenz369/gpu_reports.git
+```
+
+## recurring:
+```
+module load conda
+conda activate detr_12.2
+cd /global/homes/m/marcolz/DETR/hgp_detr
+```
+
+## Profiling of 1 GPU
+```
+salloc --nodes 1 --gpus=1 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
+cd /global/homes/m/marcolz/DETR/hgp_detr
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=12345
+dcgmi profile -–pause
+```
+
+Nsight Systems
+```
+srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU1/nsys/__report_name__ --force-overwrite true python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
+| tee ../output/perlmutter_1gpu.txt  
+```
+
+Nsight Compute
+```
+srun ncu --nvtx --nvtx-include --kernel-id :::1 --export=../gpu_reports/perlmutter/GPU1/ncu/__report_name__ --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
+| tee ../output/perlmutter_1gpu.txt
+```
     
+## Profiling of 2 GPUs
+```
+salloc --nodes 1 --gpus=2 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
+cd /global/homes/m/marcolz/DETR/hgp_detr
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=12345
+dcgmi profile -–pause
+```
 
-    srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU1_/nsys/nsys_report_annotated
-    srun ncu --nvtx --nvtx-include --kernel-id :::1 --export=../gpu_reports/perlmutter/GPU1/ncu/ncu_report_gpu_ann
-    python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
-    | tee ../output/perlmutter_1gpu.txt  
+Nsight Systems
+```
+srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU2/nsys/__report_name__ --force-overwrite true python -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
+| tee ../output/perlmutter_2gpu.txt  
+```
 
-  2 GPUs:
-    salloc --nodes 1 --gpus=2 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
-    cd DETR/hgp_detr
-    export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
-    export MASTER_PORT=12345
-    export OMP_NUM_THREADS=64  # Adjust the number 64 according to your system's capability
+Nsight Compute
+```
+srun ncu --nvtx --nvtx-include --kernel-id :::1 --export=../gpu_reports/perlmutter/GPU2/ncu/__report_name__ --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg python main.py -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
+| tee ../output/perlmutter_2gpu.txt      
+```
 
-    srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU2_/nsys_report
-    srun ncu --nvtx --kernel-id :::1 --export=../gpu_reports/perlmutter/GPU2_/ncu/ncu_report_gpu_ann
-    python -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp 
-    | tee ../output/perlmutter_2gpus_.txt
-
+## Output Sync
+```
+rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/perlmutter /Users/marcolorenz/Programming/DETR/gpu_reports
+```
 Nsight Systems:
   nsys-ui report_name.nsys-rep
+
+
+# Octane
+
+## initial:
+```
+ssh octane
+git clone https://github.com/lorenz369/hgp_detr.git
+```
+
+### conda for brook/dev nodes
+```
+conda create --name detr_clone --clone base #for brook and dev
+conda activate detr_clone
+conda install conda-forge::pycocotools
+```
+
+## Profiling, e.g. dev
+```
+srun -p dev -N 1 --gres=gpu:1 --cpus-per-task 1 --mem 4G --pty bash -i
+module load anaconda/3
+module load cuda/11.4
+conda activate detr_clone
+cd /home/mlorenz/hgp_detr/
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=12345
+nsys profile -o /home/mlorenz/octane/dev/nsys/__report_name__ --stats=true -t nvtx,cuda --force-overwrite true python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --num_workers 1 --dataset_file hgp 
+| tee /home/mlorenz/octane/dev/txt/output.txt
+```
+
+## Output Sync
+```
+rsync -avz mlorenz@ceg-octane:/home/mlorenz/octane /Users/marcolorenz/Programming/DETR/gpu_reports
+```
     
 
-helpful commands: 
-  tee, screen or tmux
-  rsync -avz mlorenz@ceg-octane:/home/mlorenz/output /Users/marcolorenz/Programming/DETR
-  rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/perlmutter/GPU1 /Users/marcolorenz/Programming/DETR/gpu_reports/perlmutter
-
-octane: 
-  ssh octane
-  initial:
-    git clone https://github.com/lorenz369/hgp_detr.git
-    git clone https://github.com/lorenz369/gpu_reports.git
-
-  conda env brook/dev:
-    conda create --name detr_clone --clone base #for brook and dev
-    conda activate detr_clone
-    conda install conda-forge::pycocotools
-
-  e.g. brook:
-    module load anaconda/3
-    module load cuda/11.4
-    srun -p brook -N 1 --gres=gpu:1 --cpus-per-task 1 --mem 4G --pty bash -i
-    conda activate detr_clone
-    cd hgp_detr/
-    export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
-    export MASTER_PORT=12345
-    nsys profile -o ../output/nsys2 --stats=true python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --num_workers 1 --dataset_file hgp 
-    | tee ../output/output.txt
+# Helpful commands 
+tee, screen or tmux
+    
 
 
 **DE⫶TR**: End-to-End Object Detection with Transformers
@@ -225,29 +333,6 @@ We provide a few notebooks in colab to help you get a grasp on DETR:
 * [Standalone Colab Notebook](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/detr_demo.ipynb): In this notebook, we demonstrate how to implement a simplified version of DETR from the grounds up in 50 lines of Python, then visualize the predictions. It is a good starting point if you want to gain better understanding the architecture and poke around before diving in the codebase.
 * [Panoptic Colab Notebook](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/DETR_panoptic.ipynb): Demonstrates how to use DETR for panoptic segmentation and plot the predictions.
 
-
-# Usage - Object detection
-There are no extra compiled components in DETR and package dependencies are minimal,
-so the code is very simple to use. We provide instructions how to install dependencies via conda.
-First, clone the repository locally:
-```
-git clone https://github.com/facebookresearch/detr.git
-```
-Then, install PyTorch 1.5+ and torchvision 0.6+:
-```
-conda install -c pytorch pytorch torchvision
-```
-Install pycocotools (for evaluation on COCO) and scipy (for training):
-```
-conda install cython scipy
-pip install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
-```
-That's it, should be good to train and evaluate detection models.
-
-(optional) to work with panoptic install panopticapi:
-```
-pip install git+https://github.com/cocodataset/panopticapi.git
-```
 
 ## Data preparation
 
