@@ -4,7 +4,6 @@
 # Added support of the Hands, Guns and Phones dataset (HGP), including the following
 # - import of the build_evaluator method to support the HGP dataset in line 24
 # - call of the build_evaluator method to support the HGP dataset in line 88
-# Added nvtx annotations for profiling with NVIDIA Nsight Systems
 # This modification is made under the terms of the Apache License 2.0, which is the license
 # originally associated with this file. All original copyright, patent, trademark, and
 # attribution notices from the Source form of the Work have been retained, excluding those 
@@ -26,10 +25,6 @@ import util.misc as utils
 from datasets.__init__ import build_evaluator # Added by Marco Lorenz on April 2nd, 2024
 from datasets.panoptic_eval import PanopticEvaluator
 
-import nvtx # Added by Marco Lorenz on April 12th, 2024
-from nvtx import annotate # Added by Marco Lorenz on April 4th, 2024
-
-
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, max_norm: float = 0):
@@ -45,13 +40,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         
-        rng = nvtx.start_range(message="batch", color="pink") # Added by Marco Lorenz on April 12th, 2024
-
-        with annotate("forward"): # Added by Marco Lorenz on April 8th, 2024
-            outputs = model(samples)
-        with annotate("loss"): # Added by Marco Lorenz on April 8th, 2024
-            loss_dict = criterion(outputs, targets)
-            weight_dict = criterion.weight_dict
+        outputs = model(samples)
+        loss_dict = criterion(outputs, targets)
+        weight_dict = criterion.weight_dict
         losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
 
         # reduce losses over all GPUs for logging purposes
@@ -70,14 +61,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             sys.exit(1)
 
         optimizer.zero_grad()
-        with annotate("backward"): # Added by Marco Lorenz on April 4th, 2024
-            losses.backward()
+        losses.backward()
         if max_norm > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
-        with annotate("optimizer_step"): # Added by Marco Lorenz on April 4th, 2024
             optimizer.step()
-
-        nvtx.end_range(rng) # Added by Marco Lorenz on April 12th, 2024
 
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
