@@ -106,174 +106,6 @@ Matcher | explanation | default |
 | --dist_url    | url used to set up distributed training    | 'env://'    |
 
 
-# Perlmutter
-
-## initial:
-```
-ssh marcolz@saul.nersc.gov
-conda create -n "detr_12.2" python cython pycocotools pytorch torchvision pytorch scipy conda-forge::nvtx -c pytorch -c nvidia
-git clone https://github.com/lorenz369/hgp_detr.git
-git clone https://github.com/lorenz369/gpu_reports.git
-```
-
-## recurring:
-```
-module load conda
-conda activate detr_12.2
-cd /global/homes/m/marcolz/DETR/hgp_detr
-```
-
-## Profiling of 1 GPU
-```
-salloc --nodes 1 --gpus=1 --qos debug --time 00:15:00 --constraint gpu --account=m3930
-cd /global/homes/m/marcolz/DETR/hgp_detr
-export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
-export MASTER_PORT=12345
-dcgmi profile -–pause
-```
-
-Nsight Systems
-```
-srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU1/nsys/__report_name__ --force-overwrite true python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
-| tee ../output/perlmutter_1gpu.txt  
-```
-
-Nsight Compute
-```
-ncu --target-processes all --nvtx --nvtx-include rng --range-filter :0:[5] -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu/perlmutter1 python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /global/homes/m/marcolz/DETR/gpu_reports/GPU1/perlmutter1.txt
-
-ncu --nvtx --nvtx-include rng --range-filter :0:[5] -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/home/coder/coder/ncu/__report_name__ python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /home/coder/coder/txt/coder.txt
-```
-
-
- 
-
-## Profiling of 2 GPUs
-```
-salloc --nodes 1 --gpus=2 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
-cd /global/homes/m/marcolz/DETR/hgp_detr
-export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
-export MASTER_PORT=12345
-dcgmi profile -–pause
-```
-
-Nsight Systems
-```
-srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU2/nsys/__report_name__ --force-overwrite true python -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
-| tee ../output/perlmutter_2gpu.txt  
-```
-
-Nsight Compute
-```
-srun ncu --nvtx --nvtx-include --kernel-id :::1 --export=../gpu_reports/perlmutter/GPU2/ncu/__report_name__ --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg python main.py -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
-| tee ../output/perlmutter_2gpu.txt      
-```
-
-## Output Sync
-```
-rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/perlmutter /Users/marcolorenz/Programming/DETR/gpu_reports
-```
-Nsight Systems:
-  nsys-ui report_name.nsys-rep
-
-# Experimental: Coder
-
-## initial
-ssh coder.DETR.main
-conda install cuda -c nvidia
-conda install nvtx pycocotools -c conda-forge
-
-git clone https://github.com/lorenz369/hgp_detr.git
-
-## Find the correct ncu installation path sing the find or locate Command
-If you're unsure of the installation path, you can use the find or locate command to search for ncu across your system. Try out all the options to find the correct one and configure the environment in the next step.
-
-Using find:
-```
-sudo find / -name ncu 2>/dev/null
-```
-
-## Set the Correct `ncu` Path Permanently
-
-Since you've identified the correct `ncu` executable for your system, you should configure your environment to use this path by default.
-
-### Update `.bashrc` or `.bash_profile`
-
-1. **Open Your Configuration File**: Open your `.bashrc` or `.bash_profile` in a text editor. You can use `nano` for a simple text editing experience:
-
-    ```bash
-    nano ~/.bashrc  # or ~/.bash_profile
-    ```
-
-2. **Add the `ncu` Path**: Add the following line at the end of the file to update your `PATH` environment variable:
-
-    ```bash
-    export PATH="/opt/miniconda/envs/DL/nsight-compute/2024.1.1/target/linux-desktop-glibc_2_11_3-x64:$PATH"
-    ```
-
-3. **Save and Exit**: Save your changes and exit the editor. If you are using `nano`, you can press `Ctrl + O` to write the changes, press `Enter` to confirm, and then `Ctrl + X` to exit.
-
-4. **Activate the Changes**: To make the changes take effect, source your updated configuration file:
-
-    ```bash
-    source ~/.bashrc  # or source ~/.bash_profile
-    ```
-
-This setup ensures that the correct version of `ncu` is available system-wide in any new terminal session.
-
-## Profiling
-```
-cd /home/coder/hgp_detr
-```
-
-Nsight Compute
-```
-ncu --range-filter :0:[5] --nvtx --nvtx-include rng -k regex:elementwise --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/home/coder/coder/ncu/__report_name__ python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /home/coder/coder/txt/coder.txt      
-```
-
-## Output Sync
-```
-rsync -avz /home/coder/coder /Users/marcolorenz/Programming/DETR/gpu_reports
-```
-
-# Octane
-
-## initial:
-```
-ssh octane
-git clone https://github.com/lorenz369/hgp_detr.git
-```
-
-### conda for brook/dev nodes
-```
-conda create --name detr_clone --clone base #for brook and dev
-conda activate detr_clone
-conda install conda-forge::pycocotools
-```
-
-## Profiling, e.g. dev
-```
-srun -p dev -N 1 --gres=gpu:1 --cpus-per-task 1 --mem 4G --pty bash -i
-module load anaconda/3
-module load cuda/11.4
-conda activate detr_clone
-cd /home/mlorenz/hgp_detr/
-export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
-export MASTER_PORT=12345
-nsys profile -o /home/mlorenz/octane/dev/nsys/__report_name__ --stats=true -t nvtx,cuda --force-overwrite true python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --num_workers 1 --dataset_file hgp 
-| tee /home/mlorenz/octane/dev/txt/output.txt
-```
-
-## Output Sync
-```
-rsync -avz mlorenz@ceg-octane:/home/mlorenz/octane /Users/marcolorenz/Programming/DETR/gpu_reports
-```
-    
-
-# Helpful commands 
-tee, screen or tmux
-    
-
 
 **DE⫶TR**: End-to-End Object Detection with Transformers
 ========
@@ -519,3 +351,170 @@ DETR is released under the Apache 2.0 license. Please see the [LICENSE](LICENSE)
 
 # Contributing
 We actively welcome your pull requests! Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) for more info.
+
+# Profiling on NERSC-9, Perlmutter
+
+## initial:
+```
+ssh marcolz@saul.nersc.gov
+conda create -n "detr_12.2" python cython pycocotools pytorch torchvision pytorch scipy conda-forge::nvtx -c pytorch -c nvidia
+git clone https://github.com/lorenz369/hgp_detr.git
+git clone https://github.com/lorenz369/gpu_reports.git
+```
+
+## recurring:
+```
+module load conda
+conda activate detr_12.2
+cd /global/homes/m/marcolz/DETR/hgp_detr
+```
+
+## Profiling of 1 GPU
+```
+salloc --nodes 1 --gpus=1 --qos debug --time 00:15:00 --constraint gpu --account=m3930
+cd /global/homes/m/marcolz/DETR/hgp_detr
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=12345
+dcgmi profile -–pause
+```
+
+Nsight Systems
+```
+srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU1/nsys/__report_name__ --force-overwrite true python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
+| tee ../output/perlmutter_1gpu.txt  
+```
+
+Nsight Compute
+```
+ncu --target-processes all --nvtx --nvtx-include rng --range-filter :0:[5] -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu/perlmutter1 python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /global/homes/m/marcolz/DETR/gpu_reports/GPU1/perlmutter1.txt
+
+ncu --nvtx --nvtx-include rng --range-filter :0:[5] -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/home/coder/coder/ncu/__report_name__ python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /home/coder/coder/txt/coder.txt
+```
+
+
+ 
+
+## Profiling of 2 GPUs
+```
+salloc --nodes 1 --gpus=2 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
+cd /global/homes/m/marcolz/DETR/hgp_detr
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=12345
+dcgmi profile -–pause
+```
+
+Nsight Systems
+```
+srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU2/nsys/__report_name__ --force-overwrite true python -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
+| tee ../output/perlmutter_2gpu.txt  
+```
+
+Nsight Compute
+```
+srun ncu --nvtx --nvtx-include --kernel-id :::1 --export=../gpu_reports/perlmutter/GPU2/ncu/__report_name__ --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg python main.py -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
+| tee ../output/perlmutter_2gpu.txt      
+```
+
+## Output Sync
+```
+rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/perlmutter /Users/marcolorenz/Programming/DETR/gpu_reports
+```
+Nsight Systems:
+  nsys-ui report_name.nsys-rep
+
+# Profiling with Coder
+
+## initial
+ssh coder.DETR.main
+conda install cuda -c nvidia
+conda install nvtx pycocotools -c conda-forge
+
+git clone https://github.com/lorenz369/hgp_detr.git
+
+## Find the correct ncu installation path sing the find or locate Command
+If you're unsure of the installation path, you can use the find or locate command to search for ncu across your system. Try out all the options to find the correct one and configure the environment in the next step.
+
+Using find:
+```
+sudo find / -name ncu 2>/dev/null
+```
+
+## Set the Correct `ncu` Path Permanently
+
+Since you've identified the correct `ncu` executable for your system, you should configure your environment to use this path by default.
+
+### Update `.bashrc` or `.bash_profile`
+
+1. **Open Your Configuration File**: Open your `.bashrc` or `.bash_profile` in a text editor. You can use `nano` for a simple text editing experience:
+
+    ```bash
+    nano ~/.bashrc  # or ~/.bash_profile
+    ```
+
+2. **Add the `ncu` Path**: Add the following line at the end of the file to update your `PATH` environment variable:
+
+    ```bash
+    export PATH="/opt/miniconda/envs/DL/nsight-compute/2024.1.1/target/linux-desktop-glibc_2_11_3-x64:$PATH"
+    ```
+
+3. **Save and Exit**: Save your changes and exit the editor. If you are using `nano`, you can press `Ctrl + O` to write the changes, press `Enter` to confirm, and then `Ctrl + X` to exit.
+
+4. **Activate the Changes**: To make the changes take effect, source your updated configuration file:
+
+    ```bash
+    source ~/.bashrc  # or source ~/.bash_profile
+    ```
+
+This setup ensures that the correct version of `ncu` is available system-wide in any new terminal session.
+
+## Profiling
+```
+cd /home/coder/hgp_detr
+```
+
+Nsight Compute
+```
+ncu --range-filter :0:[5] --nvtx --nvtx-include rng -k regex:elementwise --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/home/coder/coder/ncu/__report_name__ python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /home/coder/coder/txt/coder.txt      
+```
+
+## Output Sync
+```
+rsync -avz /home/coder/coder /Users/marcolorenz/Programming/DETR/gpu_reports
+```
+
+# Profiling on Octane
+
+## initial:
+```
+ssh octane
+git clone https://github.com/lorenz369/hgp_detr.git
+```
+
+### conda for brook/dev nodes
+```
+conda create --name detr_clone --clone base #for brook and dev
+conda activate detr_clone
+conda install conda-forge::pycocotools
+```
+
+## Profiling, e.g. dev
+```
+srun -p dev -N 1 --gres=gpu:1 --cpus-per-task 1 --mem 4G --pty bash -i
+module load anaconda/3
+module load cuda/11.4
+conda activate detr_clone
+cd /home/mlorenz/hgp_detr/
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=12345
+nsys profile -o /home/mlorenz/octane/dev/nsys/__report_name__ --stats=true -t nvtx,cuda --force-overwrite true python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --num_workers 1 --dataset_file hgp 
+| tee /home/mlorenz/octane/dev/txt/output.txt
+```
+
+## Output Sync
+```
+rsync -avz mlorenz@ceg-octane:/home/mlorenz/octane /Users/marcolorenz/Programming/DETR/gpu_reports
+```
+    
+
+# Helpful commands 
+tee, screen or tmux
