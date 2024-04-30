@@ -1,6 +1,8 @@
 # --------------------------------------------------------------------------------
-# Modified by Marco Lorenz on April 4th, 2024.
-# Added nvtx annotations for profiling with NVIDIA Nsight Systems
+# Modified by Marco Lorenz in April 2024.
+# - Added nvtx annotations for profiling with NVIDIA Nsight Systems
+# - Added the option to sample a random subset of the dataset for faster training 
+#   when using the --fast_dev_run flag
 # This modification is made under the terms of the Apache License 2.0, which is the license
 # originally associated with this file. All original copyright, patent, trademark, and
 # attribution notices from the Source form of the Work have been retained, excluding those 
@@ -17,7 +19,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader, DistributedSampler, SubsetRandomSampler # Added by Marco Lorenz on April 28th, 2024
 
 import datasets
 import util.misc as utils
@@ -25,7 +27,6 @@ from datasets import build_dataset, get_coco_api_from_dataset
 from engine import evaluate, train_one_epoch
 from models import build_model
 
-import nvtx # Added by Marco Lorenz on April 12th, 2024
 from nvtx import annotate # Added by Marco Lorenz on April 4th, 2024
 
 def get_args_parser():
@@ -105,6 +106,7 @@ def get_args_parser():
                         help='start epoch')
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--num_workers', default=2, type=int)
+    parser.add_argument('--fast_dev_run', default='1.0', type=float, help='Sample a random subset of the dataset for faster training')
 
     # distributed training parameters
     parser.add_argument('--world_size', default=1, type=int,
@@ -154,8 +156,17 @@ def main(args):
     dataset_val = build_dataset(image_set='val', args=args)
 
     if args.distributed:
-        sampler_train = DistributedSampler(dataset_train)
+        # Modified by Marco Lorenz on April 28th, 2024
+        if args.fast_dev_run:
+            sampler_train = utils.SubsetDistributedSampler(dataset_train, num_replicas=torch.distributed.get_world_size(), rank=torch.distributed.get_rank(), subset_fraction=args.fast_dev_run)
+        else:
+            sampler_train = DistributedSampler(dataset_train)
         sampler_val = DistributedSampler(dataset_val, shuffle=False)
+    elif args.fast_dev_run < 1.0:
+        indices = np.random.permutation(len(dataset_train))
+        subset_indices = indices[:int(float(args.fast_dev_run) * len(indices))]
+        sampler_train = SubsetRandomSampler(subset_indices)
+        sampler_val = torch.utils.data.SequentialSampler(dataset_val)
     else:
         sampler_train = torch.utils.data.RandomSampler(dataset_train)
         sampler_val = torch.utils.data.SequentialSampler(dataset_val)
@@ -226,14 +237,15 @@ def main(args):
                         'args': args,
                     }, checkpoint_path)
 
-            test_stats, coco_evaluator = evaluate(
-                model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir
-            )
+            if not args.fast_dev_run:
+                test_stats, coco_evaluator = evaluate(
+                    model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir
+                )
 
-            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                        **{f'test_{k}': v for k, v in test_stats.items()},
-                        'epoch': epoch,
-                        'n_parameters': n_parameters}
+                log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                            **{f'test_{k}': v for k, v in test_stats.items()},
+                            'epoch': epoch,
+                            'n_parameters': n_parameters}
 
             if args.output_dir and utils.is_main_process():
                 with (output_dir / "log.txt").open("a") as f:

@@ -1,6 +1,8 @@
 # --------------------------------------------------------------------------------
-# Modified by Marco Lorenz on April 13th, 2024.
-# Added support of CPU training on Perlmutter.
+# Modified by Marco Lorenz in April 2024.
+# - Added support of CPU training on Perlmutter.
+# - Added SubsetRandomSampler to enable faster training when using the --fast_dev_run flag
+#   (See main.py)
 # This modification is made under the terms of the Apache License 2.0, which is the license
 # originally associated with this file. All original copyright, patent, trademark, and
 # attribution notices from the Source form of the Work have been retained, excluding those 
@@ -25,6 +27,8 @@ from typing import Optional, List
 import torch
 import torch.distributed as dist
 from torch import Tensor
+
+from torch.utils.data import DistributedSampler # Added by Marco Lorenz on April 28th, 2023
 
 # needed due to empty tensor bug in pytorch and torchvision 0.5
 import torchvision
@@ -475,3 +479,18 @@ def interpolate(input, size=None, scale_factor=None, mode="nearest", align_corne
         return _new_empty_tensor(input, output_shape)
     else:
         return torchvision.ops.misc.interpolate(input, size, scale_factor, mode, align_corners)
+
+class SubsetDistributedSampler(DistributedSampler):
+    def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True, subset_fraction=0.1):
+        super().__init__(dataset, num_replicas=num_replicas, rank=rank, shuffle=shuffle)
+        self.subset_fraction = subset_fraction
+
+    def __iter__(self):
+        # Generate all indices and shuffle if required
+        indices = list(super().__iter__())
+        total_size = len(indices)
+        subset_size = int(self.subset_fraction * total_size)
+
+        # Select subset_size indices to use
+        subset_indices = np.random.choice(indices, subset_size, replace=False)
+        return iter(subset_indices)
