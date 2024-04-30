@@ -18,7 +18,8 @@ git clone https://github.com/facebookresearch/detr.git
 ```
 Then, install PyTorch 1.5+ and torchvision 0.6+:
 ```
-conda install -c pytorch pytorch torchvision
+conda create -n detr -c pytorch pytorch torchvision
+conda activate detr
 ```
 Install pycocotools (for evaluation on COCO), nvtx (for annotations) and scipy (for training):
 ```
