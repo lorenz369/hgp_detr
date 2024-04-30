@@ -1,12 +1,3 @@
-# --------------------------------------------------------------------------------
-# Modified by Marco Lorenz on April 8th and 19th, 2024.
-# Added nvtx annotations for profiling with NVIDIA Nsight Systems
-# This modification is made under the terms of the Apache License 2.0, which is the license
-# originally associated with this file. All original copyright, patent, trademark, and
-# attribution notices from the Source form of the Work have been retained, excluding those 
-# notices that do not pertain to any part of the Derivative Works.
-# --------------------------------------------------------------------------------
-
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 DETR model and criterion classes.
@@ -25,9 +16,6 @@ from .matcher import build_matcher
 from .segmentation import (DETRsegm, PostProcessPanoptic, PostProcessSegm,
                            dice_loss, sigmoid_focal_loss)
 from .transformer import build_transformer
-
-from nvtx import annotate # Added by Marco Lorenz on April 8th, 2024
-
 
 class DETR(nn.Module):
     """ This is the DETR module that performs object detection """
@@ -69,18 +57,14 @@ class DETR(nn.Module):
         """
         if isinstance(samples, (list, torch.Tensor)):
             samples = nested_tensor_from_tensor_list(samples)
-        with annotate("forward_backbone"): # Added by Marco Lorenz on April 8th, 2024
-            features, pos = self.backbone(samples)
+        features, pos = self.backbone(samples)
 
         src, mask = features[-1].decompose()
         assert mask is not None
-        with annotate("forward_transformer"): # Added by Marco Lorenz on April 8th, 2024
-            hs = self.transformer(self.input_proj(src), mask, self.query_embed.weight, pos[-1])[0]
+        hs = self.transformer(self.input_proj(src), mask, self.query_embed.weight, pos[-1])[0]
 
-        with annotate("forward_output_classes"): # Added by Marco Lorenz on April 8th, 2024
-            outputs_class = self.class_embed(hs)
-        with annotate("forward_output_boxes"): # Added by Marco Lorenz on April 8th, 2024   
-            outputs_coord = self.bbox_embed(hs).sigmoid()
+        outputs_class = self.class_embed(hs)
+        outputs_coord = self.bbox_embed(hs).sigmoid()
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
         if self.aux_loss:
             out['aux_outputs'] = self._set_aux_loss(outputs_class, outputs_coord)
