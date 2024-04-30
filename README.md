@@ -1,3 +1,14 @@
+--------------------------------------------------------------------------------
+Modified by Marco Lorenz in April 2024.
+I've forked https://github.com/facebookresearch/detr to apply the detection transformer 
+to the Hands, Guns and Phones dataset (https://paperswithcode.com/dataset/hgp), and to 
+examine and profile its execution.
+All modifications are made under the terms of the Apache License 2.0, which is the license
+originally associated with this file and repository. All original copyright, patent, 
+trademark, and attribution notices from the Source form of the Work have been retained, 
+excluding those notices that do not pertain to any part of the Derivative Works.
+--------------------------------------------------------------------------------
+
 # Usage - Object detection
 There are no extra compiled components in DETR and package dependencies are minimal,
 so the code is very simple to use. We provide instructions how to install dependencies via conda.
@@ -9,14 +20,21 @@ Then, install PyTorch 1.5+ and torchvision 0.6+:
 ```
 conda install -c pytorch pytorch torchvision
 ```
-Install pycocotools (for evaluation on COCO) and scipy (for training):
+Install pycocotools (for evaluation on COCO), nvtx (for annotations) and scipy (for training):
 ```
 conda install cython scipy
+conda install conda-forge::nvtx
+
 pip install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
 ```
 That's it, should be good to train and evaluate detection models.
 
-To run:
+To train a lightweight example configuration on the HGP dataset (GPU):
+```
+python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
+```
+
+To train a lightweight example configuration on the HGP dataset (CPU):
 ```
 python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --device cpu --dataset_file hgp
 ```
@@ -66,8 +84,8 @@ Matcher | explanation | default |
 
 | Loss coefficients | explanation | default |
 | --------------- | --------------- | --------------- |
-| --bbox_loss_coef    | Coefficient of the bbox in the loss    | Row 2 Cell 2    |
-| --giou_loss_coef    | giou coefficient in the loss    | Row 3 Cell 2    |
+| --bbox_loss_coef    | Coefficient of the bbox in the loss    | 5    |
+| --giou_loss_coef    | giou coefficient in the loss    | 2    |
 | --eos_coef    | Relative classification weight of the no-object class    | 0.1    |
 
 | Dataset parameters | explanation | default |
@@ -80,6 +98,7 @@ Matcher | explanation | default |
 | --start_epoch    | start epoch    | 0    |
 | --eval    | Evaluation    | False    |
 | --num_workers    | num_workers    | 2    |
+| --fast_dev_run | Sample a random subset of the dataset for faster training (only for profiling purposes) | 1.0 |
 
 | Distributed training parameters | explanation | default |
 | --------------- | --------------- | --------------- |
@@ -106,7 +125,7 @@ cd /global/homes/m/marcolz/DETR/hgp_detr
 
 ## Profiling of 1 GPU
 ```
-salloc --nodes 1 --gpus=1 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
+salloc --nodes 1 --gpus=1 --qos debug --time 00:15:00 --constraint gpu --account=m3930
 cd /global/homes/m/marcolz/DETR/hgp_detr
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=12345
@@ -121,10 +140,14 @@ srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/G
 
 Nsight Compute
 ```
-srun ncu --nvtx --nvtx-include --kernel-id :::1 --export=../gpu_reports/perlmutter/GPU1/ncu/__report_name__ --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
-| tee ../output/perlmutter_1gpu.txt
+ncu --target-processes all --nvtx --nvtx-include rng --range-filter :0:[5] -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu/perlmutter1 python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /global/homes/m/marcolz/DETR/gpu_reports/GPU1/perlmutter1.txt
+
+ncu --nvtx --nvtx-include rng --range-filter :0:[5] -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/home/coder/coder/ncu/__report_name__ python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /home/coder/coder/txt/coder.txt
 ```
-    
+
+
+ 
+
 ## Profiling of 2 GPUs
 ```
 salloc --nodes 1 --gpus=2 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
@@ -153,6 +176,65 @@ rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/perlm
 Nsight Systems:
   nsys-ui report_name.nsys-rep
 
+# Experimental: Coder
+
+## initial
+ssh coder.DETR.main
+conda install cuda -c nvidia
+conda install nvtx pycocotools -c conda-forge
+
+git clone https://github.com/lorenz369/hgp_detr.git
+
+## Find the correct ncu installation path sing the find or locate Command
+If you're unsure of the installation path, you can use the find or locate command to search for ncu across your system. Try out all the options to find the correct one and configure the environment in the next step.
+
+Using find:
+```
+sudo find / -name ncu 2>/dev/null
+```
+
+## Set the Correct `ncu` Path Permanently
+
+Since you've identified the correct `ncu` executable for your system, you should configure your environment to use this path by default.
+
+### Update `.bashrc` or `.bash_profile`
+
+1. **Open Your Configuration File**: Open your `.bashrc` or `.bash_profile` in a text editor. You can use `nano` for a simple text editing experience:
+
+    ```bash
+    nano ~/.bashrc  # or ~/.bash_profile
+    ```
+
+2. **Add the `ncu` Path**: Add the following line at the end of the file to update your `PATH` environment variable:
+
+    ```bash
+    export PATH="/opt/miniconda/envs/DL/nsight-compute/2024.1.1/target/linux-desktop-glibc_2_11_3-x64:$PATH"
+    ```
+
+3. **Save and Exit**: Save your changes and exit the editor. If you are using `nano`, you can press `Ctrl + O` to write the changes, press `Enter` to confirm, and then `Ctrl + X` to exit.
+
+4. **Activate the Changes**: To make the changes take effect, source your updated configuration file:
+
+    ```bash
+    source ~/.bashrc  # or source ~/.bash_profile
+    ```
+
+This setup ensures that the correct version of `ncu` is available system-wide in any new terminal session.
+
+## Profiling
+```
+cd /home/coder/hgp_detr
+```
+
+Nsight Compute
+```
+ncu --range-filter :0:[5] --nvtx --nvtx-include rng -k regex:elementwise --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/home/coder/coder/ncu/__report_name__ python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /home/coder/coder/txt/coder.txt      
+```
+
+## Output Sync
+```
+rsync -avz /home/coder/coder /Users/marcolorenz/Programming/DETR/gpu_reports
+```
 
 # Octane
 
