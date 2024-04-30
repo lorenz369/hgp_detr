@@ -117,8 +117,7 @@ class SetCriterion(nn.Module):
                                     dtype=torch.int64, device=src_logits.device)
         target_classes[idx] = target_classes_o
 
-        with annotate("loss_classes"): # Added by Marco Lorenz on April 19th, 2024
-            loss_ce = F.cross_entropy(src_logits.transpose(1, 2), target_classes, self.empty_weight)
+        loss_ce = F.cross_entropy(src_logits.transpose(1, 2), target_classes, self.empty_weight)
         losses = {'loss_ce': loss_ce}
 
         if log:
@@ -136,8 +135,7 @@ class SetCriterion(nn.Module):
         tgt_lengths = torch.as_tensor([len(v["labels"]) for v in targets], device=device)
         # Count the number of predictions that are NOT "no-object" (which is the last class)
         card_pred = (pred_logits.argmax(-1) != pred_logits.shape[-1] - 1).sum(1)
-        with annotate("loss_cardinality"): # Added by Marco Lorenz on April 8th, 2024
-            card_err = F.l1_loss(card_pred.float(), tgt_lengths.float())
+        card_err = F.l1_loss(card_pred.float(), tgt_lengths.float())
         losses = {'cardinality_error': card_err}
         return losses
 
@@ -151,14 +149,12 @@ class SetCriterion(nn.Module):
         src_boxes = outputs['pred_boxes'][idx]
         target_boxes = torch.cat([t['boxes'][i] for t, (_, i) in zip(targets, indices)], dim=0)
 
-        with annotate("loss_l1"): # Added by Marco Lorenz on April 8th, 2024
-            loss_bbox = F.l1_loss(src_boxes, target_boxes, reduction='none')
+        loss_bbox = F.l1_loss(src_boxes, target_boxes, reduction='none')
 
         losses = {}
         losses['loss_bbox'] = loss_bbox.sum() / num_boxes
 
-        with annotate("loss_giou"): # Added by Marco Lorenz on April 8th, 2024
-            loss_giou = 1 - torch.diag(box_ops.generalized_box_iou(
+        loss_giou = 1 - torch.diag(box_ops.generalized_box_iou(
                 box_ops.box_cxcywh_to_xyxy(src_boxes),
                 box_ops.box_cxcywh_to_xyxy(target_boxes)))
         losses['loss_giou'] = loss_giou.sum() / num_boxes
@@ -225,8 +221,7 @@ class SetCriterion(nn.Module):
         outputs_without_aux = {k: v for k, v in outputs.items() if k != 'aux_outputs'}
 
         # Retrieve the matching between the outputs of the last layer and the targets
-        with annotate("matcher"): # Added by Marco Lorenz on April 8th, 2024
-            indices = self.matcher(outputs_without_aux, targets)
+        indices = self.matcher(outputs_without_aux, targets)
 
         # Compute the average number of target boxes accross all nodes, for normalization purposes
         num_boxes = sum(len(t["labels"]) for t in targets)
@@ -236,27 +231,25 @@ class SetCriterion(nn.Module):
         num_boxes = torch.clamp(num_boxes / get_world_size(), min=1).item()
 
         # Compute all the requested losses
-        with annotate("losses"): # Added by Marco Lorenz on April 8th, 2024
-            losses = {}
-            for loss in self.losses:
-                losses.update(self.get_loss(loss, outputs, targets, indices, num_boxes))
+        losses = {}
+        for loss in self.losses:
+            losses.update(self.get_loss(loss, outputs, targets, indices, num_boxes))
 
         # In case of auxiliary losses, we repeat this process with the output of each intermediate layer.
-        with annotate("aux_losses"): # Added by Marco Lorenz on April 8th, 2024
-            if 'aux_outputs' in outputs:
-                for i, aux_outputs in enumerate(outputs['aux_outputs']):
-                    indices = self.matcher(aux_outputs, targets)
-                    for loss in self.losses:
-                        if loss == 'masks':
-                            # Intermediate masks losses are too costly to compute, we ignore them.
-                            continue
-                        kwargs = {}
-                        if loss == 'labels':
-                            # Logging is enabled only for the last layer
-                            kwargs = {'log': False}
-                        l_dict = self.get_loss(loss, aux_outputs, targets, indices, num_boxes, **kwargs)
-                        l_dict = {k + f'_{i}': v for k, v in l_dict.items()}
-                        losses.update(l_dict)
+        if 'aux_outputs' in outputs:
+            for i, aux_outputs in enumerate(outputs['aux_outputs']):
+                indices = self.matcher(aux_outputs, targets)
+                for loss in self.losses:
+                    if loss == 'masks':
+                        # Intermediate masks losses are too costly to compute, we ignore them.
+                        continue
+                    kwargs = {}
+                    if loss == 'labels':
+                        # Logging is enabled only for the last layer
+                        kwargs = {'log': False}
+                    l_dict = self.get_loss(loss, aux_outputs, targets, indices, num_boxes, **kwargs)
+                    l_dict = {k + f'_{i}': v for k, v in l_dict.items()}
+                    losses.update(l_dict)
 
         return losses
 
