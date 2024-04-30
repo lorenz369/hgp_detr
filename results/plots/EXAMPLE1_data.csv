@@ -1,0 +1,9 @@
+# author: M. Lorenz, Sep 2023
+# runtime in s for sobel_cpu with varying levels of concurrency
+Concurrency level,runtime
+1,0.225123
+2,0.113804
+4,0.0572283
+8,0.0308294
+16,0.0173565
+
