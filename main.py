@@ -1,6 +1,5 @@
 # --------------------------------------------------------------------------------
 # Modified by Marco Lorenz in April 2024.
-# - Added nvtx annotations for profiling with NVIDIA Nsight Systems
 # - Added the option to sample a random subset of the dataset for faster training 
 #   when using the --fast_dev_run flag
 # This modification is made under the terms of the Apache License 2.0, which is the license
@@ -214,7 +213,6 @@ def main(args):
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             sampler_train.set_epoch(epoch)
-
         train_stats = train_one_epoch(
             model, criterion, data_loader_train, optimizer, device, epoch,
             args.clip_max_norm)

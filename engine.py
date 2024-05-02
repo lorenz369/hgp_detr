@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------------------
-# Modified by Marco Lorenz in April 2024.
+# Modified by Marco Lorenz in 2024.
 # Changes made: 
+# Added CuPy profiler to the training loop in line 65 to profile the backwards computation.
 # Added support of the Hands, Guns and Phones dataset (HGP), including the following
 # - import of the build_evaluator method to support the HGP dataset in line 24
 # - call of the build_evaluator method to support the HGP dataset in line 88
@@ -24,6 +25,8 @@ import torch
 import util.misc as utils
 from datasets.__init__ import build_evaluator # Added by Marco Lorenz on April 2nd, 2024
 from datasets.panoptic_eval import PanopticEvaluator
+
+import cupy.cuda.runtime # Added by Marco Lorenz on April 2nd, 2024
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -61,7 +64,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             sys.exit(1)
 
         optimizer.zero_grad()
-        losses.backward()
+        with cupyx.profiler.profile(): # Added by Marco Lorenz on April 2nd, 2024
+            losses.backward()
         if max_norm > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
             optimizer.step()
@@ -100,7 +104,9 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
+        cupy.cuda.runtime.profilerStart() # Added by Marco Lorenz on May 2nd, 2024
         outputs = model(samples)
+        cupy.cuda.runtime.profilerStop()
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
 

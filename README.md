@@ -372,11 +372,11 @@ cd /global/homes/m/marcolz/DETR/hgp_detr
 
 ## Profiling of 1 GPU
 ```
-salloc --nodes 1 --gpus=1 --qos debug --time 00:15:00 --constraint gpu --account=m3930
+salloc --nodes 1 --gpus=1 --qos debug --time 00:20:00 --constraint gpu --account=m3930
 cd /global/homes/m/marcolz/DETR/hgp_detr
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=12345
-dcgmi profile -–pause
+dcgmi profile --pause
 ```
 
 Nsight Systems
@@ -387,9 +387,9 @@ srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/G
 
 Nsight Compute
 ```
-ncu --target-processes all --nvtx --nvtx-include rng --range-filter :0:[5] -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu/perlmutter1 python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /global/homes/m/marcolz/DETR/gpu_reports/GPU1/perlmutter1.txt
+ncu --target-processes all  -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu/perlmutter1 python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /global/homes/m/marcolz/DETR/gpu_reports/GPU1/perlmutter1.txt
 
-ncu --nvtx --nvtx-include rng --range-filter :0:[5] -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/home/coder/coder/ncu/__report_name__ python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /home/coder/coder/txt/coder.txt
+ncu  -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/home/coder/coder/ncu/__report_name__ python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /home/coder/coder/txt/coder.txt
 ```
 
 
@@ -397,11 +397,11 @@ ncu --nvtx --nvtx-include rng --range-filter :0:[5] -k regex:elementwise --launc
 
 ## Profiling of 2 GPUs
 ```
-salloc --nodes 1 --gpus=2 --qos interactive --time 00:15:00 --constraint gpu --account=m3930
+salloc --nodes 1 --gpus=2 --qos debug --time 00:15:00 --constraint gpu --account=m3930
 cd /global/homes/m/marcolz/DETR/hgp_detr
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=12345
-dcgmi profile -–pause
+dcgmi profile --pause
 ```
 
 Nsight Systems
@@ -412,7 +412,7 @@ srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/G
 
 Nsight Compute
 ```
-srun ncu --nvtx --nvtx-include --kernel-id :::1 --export=../gpu_reports/perlmutter/GPU2/ncu/__report_name__ --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg python main.py -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
+srun ncu --export=../gpu_reports/perlmutter/GPU2/ncu/__report_name__ --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg python main.py -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
 | tee ../output/perlmutter_2gpu.txt      
 ```
 
@@ -519,3 +519,19 @@ rsync -avz mlorenz@ceg-octane:/home/mlorenz/octane /Users/marcolorenz/Programmin
 
 # Helpful commands 
 tee, screen or tmux
+
+
+
+
+salloc --nodes 1 --gpus=1 --qos debug --time 00:30:00 --constraint gpu --account=m3930
+cd /global/homes/m/marcolz/DETR/hgp_detr
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=12345
+dcgmi profile --pause
+
+
+python main.py --epochs 1  --backbone resnet18 --enc_layers 2 --dec_layers 2 --dim_feedforward 512 --hidden_dim 64 --nheads 3 --num_queries 20 --dataset_file hgp
+
+ncu --target-processes all -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu/debug_target_processes python main.py --epochs 1  --backbone resnet18 --enc_layers 2 --dec_layers 2 --dim_feedforward 512 --hidden_dim 64 --nheads 3 --num_queries 20 --dataset_file hgp | tee /global/homes/m/marcolz/DETR/gpu_reports/GPU1/debug_target_processes.txt
+
+ncu -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu/debug_np_target_processes python main.py --epochs 1  --backbone resnet18 --enc_layers 2 --dec_layers 2 --dim_feedforward 512 --hidden_dim 64 --nheads 3 --num_queries 20 --dataset_file hgp | tee /global/homes/m/marcolz/DETR/gpu_reports/GPU1/debug_no_target_processes.txt
