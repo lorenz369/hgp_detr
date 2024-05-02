@@ -1,7 +1,10 @@
 #!/bin/bash -l
 #SBATCH --constraint=gpu
 #SBATCH --nodes=1
+#SBATCH --gpus=1
+#SBATCH --qos debug
 #SBATCH --time=00:30:00
+#SBATCH --account=m3930
 
 # --------------------------------------------------------------------------------
 # File added by Marco Lorenz in April 2024 to profile different configurations of hyperparameters
