@@ -1,3 +1,8 @@
+#!/bin/bash -l
+#SBATCH --constraint=gpu
+#SBATCH --nodes=1
+#SBATCH --time=00:30:00
+
 # --------------------------------------------------------------------------------
 # File added by Marco Lorenz in April 2024 to profile different configurations of hyperparameters
 # with Nvidia Nsight Compute on a slurm system (NERSC-9, Perlmutter).
@@ -6,11 +11,6 @@
 # attribution notices from the Source form of the Work have been retained, excluding those 
 # notices that do not pertain to any part of the Derivative Works.
 # --------------------------------------------------------------------------------
-
-#!/bin/bash -l
-#SBATCH --constraint=gpu
-#SBATCH --nodes=1
-#SBATCH --time=00:30:00
 
 # Time
 metrics="sm__cycles_elapsed.avg,\
