@@ -145,6 +145,7 @@ def build_hgp(image_set):
     file_dir = Path(__file__).resolve().parent
     root = Path(file_dir, 'HGP')
     mode = 'instances'
+    print(f'Dataset-root specified: {root}')
     assert root.exists(), f'provided path {root} does not exist'
     PATHS = {
         "train": (root / "images" / "train2017", root / "labels" / "train2017", root / "images" / "annotations"/ f"{mode}_train2017.json"),
