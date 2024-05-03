@@ -142,7 +142,7 @@ def make_transforms(image_set):
     raise ValueError(f'unknown {image_set}')
 
 def build_hgp(image_set):
-    file_dir = Path(__file__).resolve().parent
+    file_dir = Path(__file__).resolve().parent.parent
     root = Path(file_dir, 'HGP')
     mode = 'instances'
     print(f'Dataset-root specified: {root}')
