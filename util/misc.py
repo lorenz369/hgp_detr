@@ -29,6 +29,7 @@ import torch.distributed as dist
 from torch import Tensor
 
 from torch.utils.data import DistributedSampler # Added by Marco Lorenz on April 28th, 2023
+import numpy as np  # Added by Marco Lorenz on April 28th, 2023
 
 # needed due to empty tensor bug in pytorch and torchvision 0.5
 import torchvision
@@ -480,7 +481,7 @@ def interpolate(input, size=None, scale_factor=None, mode="nearest", align_corne
     else:
         return torchvision.ops.misc.interpolate(input, size, scale_factor, mode, align_corners)
 
-class SubsetDistributedSampler(DistributedSampler):
+class SubsetDistributedSampler(DistributedSampler): # Added by Marco Lorenz on April 28th, 2023
     def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True, subset_fraction=0.1):
         super().__init__(dataset, num_replicas=num_replicas, rank=rank, shuffle=shuffle)
         self.subset_fraction = subset_fraction
