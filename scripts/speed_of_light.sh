@@ -70,6 +70,7 @@ input="python /global/homes/m/marcolz/DETR/hgp_detr/main.py"
 input+=" --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file"
 
 # pre-run
+module load gpu
 module load conda
 conda activate detr_12.2
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
@@ -77,10 +78,10 @@ export MASTER_PORT=12345
 dcgmi profile --pause
     
 
-echo " ncu --profile-from-start off --target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-skip $ls --launch-count $lc --metrics $metrics --export=\"$root/sol_startoff_targetall\" --csv $input "
-ncu --profile-from-start off --target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-skip $ls --launch-count $lc --metrics $metrics --export=\"$root/sol_startoff_targetall\" --csv $input
+echo " ncu --profile-from-start off --target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol_startoff_targetall\" --csv $input "
+ncu --profile-from-start off --target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol_startoff_targetall\" --csv $input
 
-echo "  --nvtx --kernel-id :::1 --kernel-name $k --launch-skip $ls --launch-count $lc --metrics $metrics --export=\"$root/sol_wo_fstartoff_targetall\" --csv $input "
-ncu --nvtx --kernel-id :::1 --kernel-name $k --launch-skip $ls --launch-count $lc --metrics $metrics --export=\"$root/sol_wo_fstartoff_targetall\" --csv $input
+echo " ncu  --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol_wo_fstartoff_targetall\" --csv $input "
+ncu --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol_wo_fstartoff_targetall\" --csv $input
 
 
