@@ -26,7 +26,7 @@ import util.misc as utils
 from datasets.__init__ import build_evaluator # Added by Marco Lorenz on April 2nd, 2024
 from datasets.panoptic_eval import PanopticEvaluator
 
-import cupy.cuda.runtime # Added by Marco Lorenz on April 2nd, 2024
+import cupy.cuda.runtime # Added by Marco Lorenz on May 2nd, 2024
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -64,8 +64,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             sys.exit(1)
 
         optimizer.zero_grad()
-        with cupyx.profiler.profile(): # Added by Marco Lorenz on April 2nd, 2024
-            losses.backward()
+        cupy.cuda.runtime.profilerStart() # Added by Marco Lorenz on April 2nd, 2024
+        losses.backward()
+        cupy.cuda.runtime.profilerStop()
         if max_norm > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
             optimizer.step()
