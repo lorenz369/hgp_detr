@@ -5,6 +5,7 @@
 #SBATCH --qos debug
 #SBATCH --time=00:30:00
 #SBATCH --account=m3930
+#SBATCH --output=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/slurm/slurm_%j.out
 
 # --------------------------------------------------------------------------------
 # File added by Marco Lorenz in April 2024 to profile different configurations of hyperparameters
