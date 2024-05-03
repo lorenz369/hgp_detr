@@ -60,12 +60,12 @@ export enc_layers=2
 export dec_layers=2
 export dim_ff=512
 export hidden_dim=64
-export nheads=3
+export nheads=4
 export queries=20
 export file="hgp"
 export ratio=0.1
-export cupy = "cupy"
-export csv = "csv"
+export cupy="cupy"
+export csv="csv"
 
 # pre-run
 module load conda
