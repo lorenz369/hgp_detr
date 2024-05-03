@@ -86,9 +86,9 @@ $input --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_laye
     > /global/homes/m/marcolz/DETR/gpu_reports/GPU1/txt/num_workers_2.txt
     
 
-echo " ncu --profile-from-start off --target-processes all --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root$cupy$csv\" --csv\
+echo " ncu --profile-from-start off --target-processes all --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root/$cupy$csv\" --csv\
     $input --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file "
-ncu --target-processes all --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root$cupy$csv\" \
+ncu --target-processes all --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root/$cupy$csv\" \
     $input --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file
 
 echo " ncu --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root/profile-from-start\" \
@@ -99,13 +99,13 @@ ncu --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $
 
 
 
-echo " ncu --target-processes all --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root$branch1\" \
+echo " ncu --target-processes all --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root/$branch1\" \
     $input --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file "
-ncu --target-processes all --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root$branch1\" \
+ncu --target-processes all --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root/$branch1\" \
     $input --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file
 
 echo " ncu --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root$branch2\" \
     $input --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file "
-ncu --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root$branch2\" \
+ncu --kernel-name $k --launch-skip $ls --launch-count $lc --set $set --section $section --metrics $metrics --export=\"$root/$branch2\" \
     $input --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file
 
