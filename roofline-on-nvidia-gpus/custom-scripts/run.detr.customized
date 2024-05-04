@@ -52,7 +52,6 @@ l1tex__t_bytes.sum"
 
 # ncu flags
 export k="regex:elementwise"
-export ls=2
 export lc=100
 export root="/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu"
 
@@ -79,10 +78,9 @@ dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
 output=output.csv
 profileargstr="--target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --csv"
 echo parameter: {parameter}
-echo ncu $profileargstr $input > $dir/$output 2>&1
+echo "ncu $profileargstr $input > $dir/$output 2>&1"
 ncu $profileargstr $input  > $dir/$output 2>&1
 
 
-module load python/3.9-anaconda-2021.11
 cd $dir
 srun -n1 python postprocess.py
