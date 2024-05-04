@@ -27,7 +27,6 @@ from datasets.__init__ import build_evaluator # Added by Marco Lorenz on April 2
 from datasets.panoptic_eval import PanopticEvaluator
 
 # import cupy.cuda.runtime # Added by Marco Lorenz on May 2nd, 2024
-import time # Added by Marco Lorenz on April 2nd, 2024
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -46,14 +45,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
     
-        start_time = time.time()  # Added by Marco Lorenz on April 2nd, 2024
-
         outputs = model(samples)
 
-        process_time = time.time() - start_time  # Added by Marco Lorenz on April 2nd, 2024
-        print(f"Processing time: {process_time:.3f} seconds") # Added by Marco Lorenz on April 2nd, 2024
 
-        loss_time_start = time.time()  # Added by Marco Lorenz on April 2nd, 2024
 
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
@@ -74,8 +68,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             print(loss_dict_reduced)
             sys.exit(1)
         
-        loss_time = time.time() - loss_time_start  # Added by Marco Lorenz on April 2nd, 2024
-        print(f"Loss computation time: {loss_time:.3f} seconds") # Added by Marco Lorenz on April 2nd, 2024
 
         optimizer.zero_grad()
         # cupy.cuda.runtime.profilerStart() # Added by Marco Lorenz on April 2nd, 2024
@@ -85,8 +77,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
             optimizer.step()
 
-        backward_time = time.time() - loss_time_start  # Time from start loss calculation to optimizer step
-        print(f"Backward pass and optimization time: {backward_time:.3f} seconds") 
 
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
