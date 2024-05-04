@@ -76,12 +76,12 @@ conda activate detr_12.2
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=12345
 dcgmi profile --pause
-    
 
-echo " ncu --profile-from-start off --target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol_startoff_targetall\" --csv $input "
-ncu --profile-from-start off --target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol_startoff_targetall\" --csv $input
 
-echo " ncu  --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol_wo_fstartoff_targetall\" --csv $input "
-ncu --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol_wo_fstartoff_targetall\" --csv $input
+echo " ncu --target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol_targetall\" --csv $input "
+ncu --profile-from-start off --target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol_targetall\" --csv $input
+
+echo " ncu --profile-from-start off --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --export=\"$root/sol__startoff\" --csv $input "
+ncu --nvtx --kernel-id :::1 --kernel-name $k  --launch-count $lc --metrics $metrics --export=\"$root/sol_fstartoff\" --csv $input
 
 
