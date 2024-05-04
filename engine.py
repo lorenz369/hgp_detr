@@ -103,9 +103,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     avg_loss_time = total_loss_time / iterations
     avg_backward_time = total_backward_time / iterations
 
-    print(f"Average processing time per iteration: {avg_process_time:.5f} seconds")
-    print(f"Average loss computation time per iteration: {avg_loss_time:.5f} seconds")
-    print(f"Average backward pass time per iteration: {avg_backward_time:.5f} seconds")
+    print(f"Average processing time per iteration: {avg_process_time:.6f} seconds")
+    print(f"Average loss computation time per iteration: {avg_loss_time:.6f} seconds")
+    print(f"Average backward pass time per iteration: {avg_backward_time:.6f} seconds")
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
