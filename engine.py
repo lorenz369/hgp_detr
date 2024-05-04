@@ -41,6 +41,12 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
+    # Time accumulators added by Marco Lorenz on April 2nd, 2024
+    total_process_time = 0
+    total_loss_time = 0
+    total_backward_time = 0
+    iterations = 0
+
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
 
         samples = samples.to(device)
@@ -50,10 +56,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
         outputs = model(samples)
 
-        process_time = time.time() - start_time  # Added by Marco Lorenz on April 2nd, 2024
-        print(f"Processing time: {process_time:.3f} seconds") # Added by Marco Lorenz on April 2nd, 2024
-
-        loss_time_start = time.time()  # Added by Marco Lorenz on April 2nd, 2024
+        process_time = time.time() - start_time # Added by Marco Lorenz on April 2nd, 2024
+        total_process_time += process_time # Added by Marco Lorenz on April 2nd, 2024
 
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
@@ -74,8 +78,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             print(loss_dict_reduced)
             sys.exit(1)
         
-        loss_time = time.time() - loss_time_start  # Added by Marco Lorenz on April 2nd, 2024
-        print(f"Loss computation time: {loss_time:.3f} seconds") # Added by Marco Lorenz on April 2nd, 2024
+        loss_time = time.time() - start_time - process_time # Added by Marco Lorenz on April 2nd, 2024
+        total_loss_time += loss_time # Added by Marco Lorenz on April 2nd, 2024
+        backward_time_start = time.time()  # Added by Marco Lorenz on April 2nd, 2024
 
         optimizer.zero_grad()
         # cupy.cuda.runtime.profilerStart() # Added by Marco Lorenz on April 2nd, 2024
@@ -85,12 +90,23 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
             optimizer.step()
 
-        backward_time = time.time() - loss_time_start  # Time from start loss calculation to optimizer step
-        print(f"Backward pass and optimization time: {backward_time:.3f} seconds") 
+        backward_time = time.time() - start_time - process_time - loss_time  # Added by Marco Lorenz on April 2nd, 2024
+        total_backward_time += backward_time # Added by Marco Lorenz on April 2nd, 2024
+        iterations += 1  # Increment iteration count
 
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+
+    # Average the accumulated times, added by Marco Lorenz on April 2nd, 2024
+    avg_process_time = total_process_time / iterations
+    avg_loss_time = total_loss_time / iterations
+    avg_backward_time = total_backward_time / iterations
+
+    print(f"Average processing time per iteration: {avg_process_time:.5f} seconds")
+    print(f"Average loss computation time per iteration: {avg_loss_time:.5f} seconds")
+    print(f"Average backward pass time per iteration: {avg_backward_time:.5f} seconds")
+
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
