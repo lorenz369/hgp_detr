@@ -2,6 +2,8 @@
 # Modified by Marco Lorenz in April 2024.
 # - Added the option to sample a random subset of the dataset for faster training 
 #   when using the --fast_dev_run flag
+# - Added the option to profile the forward pass, loss computation, backward pass, or 
+#   optimizer step using the --section flag
 # This modification is made under the terms of the Apache License 2.0, which is the license
 # originally associated with this file. All original copyright, patent, trademark, and
 # attribution notices from the Source form of the Work have been retained, excluding those 
@@ -103,12 +105,17 @@ def get_args_parser():
                         help='start epoch')
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--num_workers', default=2, type=int)
-    parser.add_argument('--fast_dev_run', default='1.0', type=float, help='Sample a random subset of the dataset for faster training')
 
     # distributed training parameters
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
+
+    # Profiling parameters, added by Marco Lorenz on April 28th, 2024
+    parser.add_argument('--fast_dev_run', default=1.0, type=float,
+                        help='fraction of dataset to use for training and testing')
+    parser.add_argument('--section', default=None, type=str, choices=('forward', 'loss', 'backward', 'optimizer_step', 'all'),
+                        help='Section of the training loop to profile')
     return parser
 
 
@@ -215,7 +222,7 @@ def main(args):
             sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
             model, criterion, data_loader_train, optimizer, device, epoch,
-            args.clip_max_norm)
+            args.clip_max_norm, args.section)
         lr_scheduler.step()
 
         if args.output_dir:

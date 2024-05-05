@@ -30,7 +30,7 @@ import cupy.cuda.runtime # Added by Marco Lorenz on May 2nd, 2024
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
-                    device: torch.device, epoch: int, max_norm: float = 0):
+                    device: torch.device, epoch: int, max_norm: float = 0, profiling_section: str = None):
     model.train()
     criterion.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -43,7 +43,15 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         
+        if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
+            cupy.cuda.runtime.profilerStart()
         outputs = model(samples)
+        if profiling_section == 'forward': # Added by Marco Lorenz on April 2nd, 2024
+            cupy.cuda.runtime.profilerStop()
+
+        if profiling_section == 'loss': # Added by Marco Lorenz on April 2nd, 2024
+            cupy.cuda.runtime.profilerStart()
+
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
         losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
@@ -58,18 +66,31 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
         loss_value = losses_reduced_scaled.item()
 
+        if profiling_section == 'loss': # Added by Marco Lorenz on April 2nd, 2024
+            cupy.cuda.runtime.profilerStop()
+
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
             print(loss_dict_reduced)
             sys.exit(1)
 
+        
         optimizer.zero_grad()
-        cupy.cuda.runtime.profilerStart() # Added by Marco Lorenz on April 2nd, 2024
+
+        if profiling_section == 'backward': # Added by Marco Lorenz on April 2nd, 2024
+            cupy.cuda.runtime.profilerStart()
         losses.backward()
-        cupy.cuda.runtime.profilerStop()
+        if profiling_section == 'backward':
+            cupy.cuda.runtime.profilerStop() # Added by Marco Lorenz on April 2nd, 2024
+
         if max_norm > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
-            optimizer.step()
+        
+        if profiling_section == 'optimizer': # Added by Marco Lorenz on April 2nd, 2024
+            cupy.cuda.runtime.profilerStart()
+        optimizer.step()
+        if profiling_section == 'optimizer' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
+            cupy.cuda.runtime.profilerStop()
 
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
