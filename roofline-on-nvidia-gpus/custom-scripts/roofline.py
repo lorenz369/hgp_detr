@@ -35,7 +35,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
     # Source: https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/
     l2_roof = 2996.77 * 2.3
     memRoofs = [('L1', 54000.), ('L2', l2_roof),  ('HBM', 1555)] 
-    cmpRoofs = [('FP16 Tensor', 311.9), ('TF32 Tensor', 155.9)]
+    cmpRoofs = [('TF32 Tensor', 155.9), ('FP32', 19.5), ('FP16', 78)]
 
     fig = plt.figure(1,figsize=(10.67,6.6))
     plt.clf()
@@ -49,7 +49,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
     xmin = -3 
     xmax = 3
     ymin = 1
-    ymax = 350000
+    ymax = 165000
 
     ax.set_xlim(10**xmin, 10**xmax)
     ax.set_ylim(ymin, ymax)
