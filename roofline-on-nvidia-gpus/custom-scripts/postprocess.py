@@ -42,7 +42,10 @@ for file in files:
                             + dfmetric["sm__sass_thread_inst_executed_op_hmul_pred_on.sum"] \
                             + dfmetric["sm__sass_thread_inst_executed_op_hadd_pred_on.sum"] 
 
-        dfmetric["TC FLOPs"]= 512 * dfmetric["sm__inst_executed_pipe_tensor.sum"]
+        dfmetric["TC FLOPs"]= 1024 * dfmetric["sm__inst_executed_pipe_tensor.sum"] # https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf
+        # The A100 SM diagram is shown in Figure 7. Volta and Turing have eight Tensor Cores per SM, with each Tensor Core performing 64 FP16/FP32 mixed-precision fused multiply-add (FMA) operations per clock. 
+        # The A100 SM includes new third-generation Tensor Cores that each perform 256 FP16/FP32 FMA operations per clock. A100 has four Tensor Cores per SM, 
+        # which together deliver 1024 dense FP16/FP32 FMA operations per clock, a 2x increase in computation horsepower per SM compared to Volta and Turing.
         dfmetric["all FLOPs"]= dfmetric["CC FLOPs"] + dfmetric["TC FLOPs"]
         
         dfmetric["AI HBM"] = dfmetric["all FLOPs"].div(dfmetric["dram__bytes.sum"])
