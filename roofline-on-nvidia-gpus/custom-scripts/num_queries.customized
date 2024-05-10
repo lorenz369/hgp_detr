@@ -55,7 +55,7 @@ export lc=100
 
 # detr parameters
 
-export epochs=1
+export epochs=3
 export backbone="resnet18"
 export enc_layers=2
 export dec_layers=2
@@ -71,6 +71,7 @@ python="python /global/homes/m/marcolz/DETR/hgp_detr/main.py"
 args=" --batch_size $batch_size --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --nheads $nheads --dim_feedforward $dim_ff --hidden_dim $hidden_dim --dataset_file $file"
 
 dir=/global/homes/m/marcolz/DETR/gpu_reports/GPU1
+pp_dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
 
 for num_queries in 20 50 100 200
 do
@@ -86,10 +87,10 @@ done
 #     output=output_num_queries$num_queries.csv
 #     profileargstr="--target-processes all --nvtx --kernel-id :::6 --launch-count $lc --metrics $metrics --csv"
 #     echo num_queries: $num_queries
-#     echo "ncu $profileargstr $python --num_queries $num_queries $args > $dir/ncu/$output 2>&1"
-#     ncu $profileargstr $python --num_queries $num_queries $args > $dir/ncu/$output 2>&1
+#     echo "ncu $profileargstr $python --num_queries $num_queries $args > $pp_dir/$output 2>&1"
+#     ncu $profileargstr $python --num_queries $num_queries $args > $pp_dir/$output 2>&1
 # done
 
 
-cd $dir
-srun -n1 python postprocess.py
+# cd $pp_dir
+# srun -n1 python /global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts/postprocess.py
