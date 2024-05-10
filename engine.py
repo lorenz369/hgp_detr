@@ -26,7 +26,7 @@ import util.misc as utils
 from datasets.__init__ import build_evaluator # Added by Marco Lorenz on April 2nd, 2024
 from datasets.panoptic_eval import PanopticEvaluator
 
-# import cupy.cuda.runtime # Added by Marco Lorenz on May 2nd, 2024
+import cupy.cuda.runtime # Added by Marco Lorenz on May 2nd, 2024
 import time # Added by Marco Lorenz on April 2nd, 2024
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
@@ -131,7 +131,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
 
 @torch.no_grad()
-def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, output_dir):
+def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, output_dir, profiling_section: str = None):
     model.eval()
     criterion.eval()
 
@@ -155,9 +155,12 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        cupy.cuda.runtime.profilerStart() # Added by Marco Lorenz on May 2nd, 2024
+        if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
+            cupy.cuda.runtime.profilerStart()
         outputs = model(samples)
-        cupy.cuda.runtime.profilerStop()
+        if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
+            cupy.cuda.runtime.profilerStop()
+            
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
 
