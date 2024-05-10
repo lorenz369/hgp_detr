@@ -112,7 +112,7 @@ def get_args_parser():
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
     # Profiling parameters, added by Marco Lorenz on April 28th, 2024
-    parser.add_argument('--fast_dev_run', default=1.0, type=float,
+    parser.add_argument('--fast_dev_run', default=None, type=float,
                         help='fraction of dataset to use for training and testing')
     parser.add_argument('--section', default=None, type=str, choices=('forward', 'loss', 'backward', 'optimizer_step', 'all'),
                         help='Section of the training loop to profile')
@@ -167,7 +167,7 @@ def main(args):
         else:
             sampler_train = DistributedSampler(dataset_train)
         sampler_val = DistributedSampler(dataset_val, shuffle=False)
-    elif args.fast_dev_run < 1.0:
+    elif args.fast_dev_run:
         indices = np.random.permutation(len(dataset_train))
         subset_indices = indices[:int(float(args.fast_dev_run) * len(indices))]
         sampler_train = SubsetRandomSampler(subset_indices)
