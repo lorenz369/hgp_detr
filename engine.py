@@ -26,7 +26,8 @@ import util.misc as utils
 from datasets.__init__ import build_evaluator # Added by Marco Lorenz on April 2nd, 2024
 from datasets.panoptic_eval import PanopticEvaluator
 
-import cupy.cuda.runtime # Added by Marco Lorenz on May 2nd, 2024
+# import cupy.cuda.runtime # Added by Marco Lorenz on May 2nd, 2024
+import time # Added by Marco Lorenz on April 2nd, 2024
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -39,15 +40,27 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
+    # Time accumulators added by Marco Lorenz on April 2nd, 2024
+    total_process_time = 0
+    total_loss_time = 0
+    total_backward_time = 0
+    iterations = 0
+
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
+
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+
+        start_time = time.time()  # Added by Marco Lorenz on April 2nd, 2024
         
         if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
         outputs = model(samples)
         if profiling_section == 'forward': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStop()
+
+        process_time = time.time() - start_time # Added by Marco Lorenz on April 2nd, 2024
+        total_process_time += process_time # Added by Marco Lorenz on April 2nd, 2024
 
         if profiling_section == 'loss': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
@@ -73,8 +86,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             print("Loss is {}, stopping training".format(loss_value))
             print(loss_dict_reduced)
             sys.exit(1)
-
         
+        loss_time = time.time() - start_time - process_time # Added by Marco Lorenz on April 2nd, 2024
+        total_loss_time += loss_time # Added by Marco Lorenz on April 2nd, 2024
+
         optimizer.zero_grad()
 
         if profiling_section == 'backward': # Added by Marco Lorenz on April 2nd, 2024
@@ -92,9 +107,23 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         if profiling_section == 'optimizer' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStop()
 
+        backward_time = time.time() - start_time - process_time - loss_time  # Added by Marco Lorenz on April 2nd, 2024
+        total_backward_time += backward_time # Added by Marco Lorenz on April 2nd, 2024
+        iterations += 1  # Increment iteration count
+
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+
+    # Average the accumulated times, added by Marco Lorenz on April 2nd, 2024
+    avg_process_time = total_process_time / iterations
+    avg_loss_time = total_loss_time / iterations
+    avg_backward_time = total_backward_time / iterations
+
+    print(f"Average processing time per iteration: {avg_process_time:.6f} seconds")
+    print(f"Average loss computation time per iteration: {avg_loss_time:.6f} seconds")
+    print(f"Average backward pass time per iteration: {avg_backward_time:.6f} seconds")
+
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
