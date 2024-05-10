@@ -110,9 +110,9 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        cupy.cuda.runtime.profilerStart() # Added by Marco Lorenz on May 2nd, 2024
+        #cupy.cuda.runtime.profilerStart() # Added by Marco Lorenz on May 2nd, 2024
         outputs = model(samples)
-        cupy.cuda.runtime.profilerStop()
+        #cupy.cuda.runtime.profilerStop()
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
 
