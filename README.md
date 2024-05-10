@@ -418,7 +418,10 @@ srun ncu --export=../gpu_reports/perlmutter/GPU2/ncu/__report_name__ --set defau
 
 ## Output Sync
 ```
-rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/perlmutter /Users/marcolorenz/Programming/DETR/gpu_reports
+rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/GPU1 /Users/marcolorenz/Programming/DETR/gpu_reports/perlmutter
+
+rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts /Users/marcolorenz/Programming/DETR/hgp_detr/roofline-on-nvidia-gpus
+
 ```
 Nsight Systems:
   nsys-ui report_name.nsys-rep

@@ -32,8 +32,10 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
         return
     LABELS = [x[:maxchar] for x in LABELS]
 
-    memRoofs = [('L1', 54000.), ('L2', 2996.77),  ('HBM', 828.76)] 
-    cmpRoofs = [('Tensor', 96.9),('DP', 7.8)]
+    # Source: https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/
+    l2_roof = 2996.77 * 2.3
+    memRoofs = [('L1', 54000.), ('L2', l2_roof),  ('HBM', 1555)] 
+    cmpRoofs = [('TF32 Tensor', 155.9), ('FP32', 19.5), ('FP16', 78)]
 
     fig = plt.figure(1,figsize=(10.67,6.6))
     plt.clf()
@@ -47,7 +49,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
     xmin = -3 
     xmax = 3
     ymin = 1
-    ymax = 200000
+    ymax = 165000
 
     ax.set_xlim(10**xmin, 10**xmax)
     ax.set_ylim(ymin, ymax)
@@ -169,7 +171,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
 
     # leg2 = plt.legend(handles = patch_handles,loc=4,ncol=1,bbox_to_anchor = (1,0.1),scatterpoints = 1)
 
-    ax.text(xlim[0]*1.1,ylim[1]/1.1, '-'.join([filename,flag]), horizontalalignment='left',verticalalignment='top')
+    # ax.text(xlim[0]*1.1,ylim[1]/1.1, '-'.join([filename,flag]), horizontalalignment='left',verticalalignment='top')
 #     plt.title('-'.join([filename,flag]))
 
     plt.savefig('_'.join([filename,flag])+'.png')
