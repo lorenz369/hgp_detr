@@ -55,7 +55,7 @@ export lc=100
 
 # detr parameters
 
-export epochs=1
+export epochs=3
 export backbone="resnet18"
 export enc_layers=2
 export dec_layers=2
