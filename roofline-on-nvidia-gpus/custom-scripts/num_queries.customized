@@ -51,10 +51,7 @@ lts__t_bytes.sum,\
 l1tex__t_bytes.sum"
 
 # ncu flags
-export k="regex:elementwise"
 export lc=100
-export root="/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu"
-
 
 # detr parameters
 
@@ -73,24 +70,24 @@ export batch_size=2
 python="python /global/homes/m/marcolz/DETR/hgp_detr/main.py"
 args=" --batch_size $batch_size --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --nheads $nheads --dim_feedforward $dim_ff --hidden_dim $hidden_dim --dataset_file $file"
 
-dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
+dir=/global/homes/m/marcolz/DETR/gpu_reports/GPU1
 
 for num_queries in 20 50 100 200
 do
     output=output_num_queries$num_queries.txt
     echo num_queries: $num_queries
-    echo "$python --num_queries $num_queries $args > $dir/$output 2>&1"
-    $python --num_queries $num_queries $args > $dir/$output 2>&1
+    echo "$python --num_queries $num_queries $args > $dir/txt/$output 2>&1"
+    $python --num_queries $num_queries $args > $dir/txt/$output 2>&1
 done
 
 
 # for num_queries in 20 50 100 200
 # do
 #     output=output_num_queries$num_queries.csv
-#     profileargstr="--target-processes all --nvtx --kernel-id :::6 --kernel-name $k --launch-count $lc --metrics $metrics --csv"
+#     profileargstr="--target-processes all --nvtx --kernel-id :::6 --launch-count $lc --metrics $metrics --csv"
 #     echo num_queries: $num_queries
-#     echo "ncu $profileargstr $python --num_queries $num_queries $args > $dir/$output 2>&1"
-#     ncu $profileargstr $python --num_queries $num_queries $args > $dir/$output 2>&1
+#     echo "ncu $profileargstr $python --num_queries $num_queries $args > $dir/ncu/$output 2>&1"
+#     ncu $profileargstr $python --num_queries $num_queries $args > $dir/ncu/$output 2>&1
 # done
 
 

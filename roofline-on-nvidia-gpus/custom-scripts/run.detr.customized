@@ -51,9 +51,7 @@ lts__t_bytes.sum,\
 l1tex__t_bytes.sum"
 
 # ncu flags
-export k="regex:elementwise"
 export lc=100
-export root="/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu"
 
 
 # detr parameters

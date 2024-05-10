@@ -51,10 +51,7 @@ lts__t_bytes.sum,\
 l1tex__t_bytes.sum"
 
 # ncu flags
-export k="regex:elementwise"
 export lc=100
-export root="/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu"
-
 
 # detr parameters
 
@@ -73,24 +70,24 @@ export batch_size=2
 python="python /global/homes/m/marcolz/DETR/hgp_detr/main.py"
 args=" --batch_size $batch_size --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --nheads $nheads --num_queries $num_queries --dim_feedforward $dim_ff --dataset_file $file"
 
-dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
+dir=/global/homes/m/marcolz/DETR/gpu_reports/GPU1
 
 for hidden_dim in 64 128 256 512
 do
     output=output_hidden_dim$hidden_dim.txt
     echo hidden_dim: $hidden_dim
-    echo "$python --hidden_dim $hidden_dim $args > $dir/$output 2>&1"
-    $python --hidden_dim $hidden_dim $args > $dir/$output 2>&1
+    echo "$python --hidden_dim $hidden_dim $args > $dir/txt/$output 2>&1"
+    $python --hidden_dim $hidden_dim $args > $dir/txt/$output 2>&1
 done
 
 
 # for hidden_dim in 64 128 256 512
 # do
 #     output=output_hidden_dim$hidden_dim.csv
-#     profileargstr="--target-processes all --nvtx --kernel-id :::6 --kernel-name $k --launch-count $lc --metrics $metrics --csv"
+#     profileargstr="--target-processes all --nvtx --kernel-id :::6 --launch-count $lc --metrics $metrics --csv"
 #     echo hidden_dim: $hidden_dim
-#     echo "ncu $profileargstr $python --hidden_dim $hidden_dim $args > $dir/$output 2>&1"
-#     ncu $profileargstr $python --hidden_dim $hidden_dim $args > $dir/$output 2>&1
+#     echo "ncu $profileargstr $python --hidden_dim $hidden_dim $args > $dir/ncu/$output 2>&1"
+#     ncu $profileargstr $python --hidden_dim $hidden_dim $args > $dir/ncu/$output 2>&1
 # done
 
 
