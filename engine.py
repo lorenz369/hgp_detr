@@ -80,7 +80,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         
         loss_time = time.time() - start_time - process_time # Added by Marco Lorenz on April 2nd, 2024
         total_loss_time += loss_time # Added by Marco Lorenz on April 2nd, 2024
-        backward_time_start = time.time()  # Added by Marco Lorenz on April 2nd, 2024
 
         optimizer.zero_grad()
         # cupy.cuda.runtime.profilerStart() # Added by Marco Lorenz on April 2nd, 2024
