@@ -4,6 +4,7 @@
 #   when using the --fast_dev_run flag
 # - Added the option to profile the forward pass, loss computation, backward pass, or 
 #   optimizer step using the --section flag
+# - Added the GradScaler to the training loop to enable mixed precision training
 # This modification is made under the terms of the Apache License 2.0, which is the license
 # originally associated with this file. All original copyright, patent, trademark, and
 # attribution notices from the Source form of the Work have been retained, excluding those 
@@ -217,12 +218,15 @@ def main(args):
 
     print("Start training")
     start_time = time.time()
+
+    scaler = torch.cuda.amp.GradScaler() # Added by Marco Lorenz on April 28th, 2024
+
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
             model, criterion, data_loader_train, optimizer, device, epoch,
-            args.clip_max_norm, args.section)
+            args.clip_max_norm, args.section, scaler) # Added args.section and scaler by Marco Lorenz on April 28th, 2024
         lr_scheduler.step()
 
         if args.output_dir:

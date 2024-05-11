@@ -5,6 +5,8 @@
 # Added support of the Hands, Guns and Phones dataset (HGP), including the following
 # - import of the build_evaluator method to support the HGP dataset in line 24
 # - call of the build_evaluator method to support the HGP dataset in line 88
+# - added the 'profiling_section' parameter to the train_one_epoch and evaluate methods to support profiling
+# - added Automatic Mixed Precision (AMP) support to the train_one_epoch method
 # This modification is made under the terms of the Apache License 2.0, which is the license
 # originally associated with this file. All original copyright, patent, trademark, and
 # attribution notices from the Source form of the Work have been retained, excluding those 
@@ -31,7 +33,7 @@ import time # Added by Marco Lorenz on April 2nd, 2024
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
-                    device: torch.device, epoch: int, max_norm: float = 0, profiling_section: str = None):
+                    device: torch.device, epoch: int, max_norm: float = 0, profiling_section: str = None, scaler: torch.cuda.amp.GradScaler = None):
     model.train()
     criterion.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -55,7 +57,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         
         if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
-        outputs = model(samples)
+        with torch.cuda.amp.autocast(): # Added by Marco Lorenz on April 2nd, 2024
+            outputs = model(samples)
         if profiling_section == 'forward': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStop()
 
@@ -94,7 +97,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
         if profiling_section == 'backward': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
-        losses.backward()
+        scaler.scale(losses).backward() # Added by Marco Lorenz on April 2nd, 2024
         if profiling_section == 'backward':
             cupy.cuda.runtime.profilerStop() # Added by Marco Lorenz on April 2nd, 2024
 
@@ -103,7 +106,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         
         if profiling_section == 'optimizer': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
-        optimizer.step()
+        scaler.step(optimizer) # Added by Marco Lorenz on April 2nd, 2024
         if profiling_section == 'optimizer' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStop()
 
@@ -114,6 +117,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+
+        scaler.update() # Added by Marco Lorenz on April 2nd, 2024
+        
+
 
     # Average the accumulated times, added by Marco Lorenz on April 2nd, 2024
     avg_process_time = total_process_time / iterations
