@@ -55,7 +55,7 @@ export lc=100
 
 # detr parameters
 
-export epochs=3
+export epochs=1
 export backbone="resnet18"
 export enc_layers=2
 export dec_layers=2
@@ -67,28 +67,28 @@ export file="hgp"
 
 
 python="python /global/homes/m/marcolz/DETR/hgp_detr/main.py"
-args=" --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file"
+args=" --section all --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file"
 
 dir=/global/homes/m/marcolz/DETR/gpu_reports/GPU1
 pp_dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
 
-for batch_size in 4 16
-do
-    output=output_batch-size$batch_size.txt
-    echo Batch Size: $batch_size
-    echo "$python --batch_size $batch_size $args > $dir/txt/$output 2>&1"
-    $python --batch_size $batch_size $args > $dir/txt/$output 2>&1
-done
-
-# for batch_size in 2 8 32 128
+# for batch_size in 2 4 8 16 32 64
 # do
-#     output=output_batch-size$batch_size.csv
-#     profileargstr="--target-processes all --nvtx --kernel-id :::6 --launch-count $lc --metrics $metrics --csv"
+#     output=output_batch-size$batch_size.txt
 #     echo Batch Size: $batch_size
-#     echo "ncu $profileargstr $python --batch_size $batch_size $args > $pp_dir/$output 2>&1"
-#     ncu $profileargstr $python --batch_size $batch_size $args > $pp_dir/$output 2>&1
+#     echo "$python --batch_size $batch_size $args > $dir/txt/$output 2>&1"
+#     $python --batch_size $batch_size $args > $dir/txt/$output 2>&1
 # done
 
+for batch_size in 2 4 8 16 32 64
+do
+    output=output_batch-size$batch_size.csv
+    profileargstr="--target-processes all --nvtx --kernel-id :::3 --launch-count $lc --metrics $metrics --csv"
+    echo Batch Size: $batch_size
+    echo "ncu $profileargstr $python --batch_size $batch_size $args > $pp_dir/$output 2>&1"
+    ncu $profileargstr $python --batch_size $batch_size $args > $pp_dir/$output 2>&1
+done
 
-# cd $dir
-# srun -n1 python /global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts/postprocess.py
+
+cd $dir
+srun -n1 python /global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts/postprocess.py
