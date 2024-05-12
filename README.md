@@ -35,6 +35,11 @@ To train a lightweight example configuration on the HGP dataset (GPU):
 python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
 ```
 
+To train on the HGP dataset (GPU):
+```
+python main.py --batch_size 2 --epochs 300  --backbone resnet18 --enc_layers 2 --dec_layers 2 --dim_feedforward 2048 --hidden_dim 256 --nheads 32 --num_queries 5 --dataset_file hgp
+```
+
 To train a lightweight example configuration on the HGP dataset (CPU):
 ```
 python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --device cpu --dataset_file hgp
