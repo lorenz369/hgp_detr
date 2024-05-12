@@ -80,7 +80,7 @@ pp_dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scri
 #     $python --batch_size $batch_size $args > $dir/txt/$output 2>&1
 # done
 
-for batch_size in 2 4 8 16 32 64
+for batch_size in 8
 do
     output=output_batch-size$batch_size.csv
     profileargstr="--target-processes all --nvtx --kernel-id :::3 --launch-count $lc --metrics $metrics --csv"

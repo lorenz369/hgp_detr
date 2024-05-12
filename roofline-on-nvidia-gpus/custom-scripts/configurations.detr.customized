@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --gpus=1
 #SBATCH --qos debug
-#SBATCH --time=00:15:00
+#SBATCH --time=01:00:00
 #SBATCH --account=m3930
 #SBATCH --output=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/slurm/slurm_%j.out
 
@@ -74,7 +74,7 @@ args_optimized=" --epochs $epochs --backbone $backbone --enc_layers $enc_layers 
 dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
 
 # Baseline
-for section in 'forward' 'loss' 'backward' 'optimizer_step'
+for section in 'backward' 'optimizer_step'
 do
     output=output_basic_$section.csv
     profileargstr="--target-processes all --nvtx --kernel-id :::3 --launch-count $lc --metrics $metrics --csv"
