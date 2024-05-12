@@ -67,17 +67,31 @@ export queries=20
 export file="hgp"
 
 
-input="python /global/homes/m/marcolz/DETR/hgp_detr/main.py"
-input+=" --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file"
+python="python /global/homes/m/marcolz/DETR/hgp_detr/main.py"
+args_basic=" --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file"
+args_optimized=" --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward 2048 --hidden_dim 256--nheads 32 --num_queries 5 --dataset_file $file"
 
 dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
 
 # Baseline
-output=output.csv
-profileargstr="--target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --csv"
-echo parameter: {parameter}
-echo "ncu $profileargstr $input > $dir/$output 2>&1"
-ncu $profileargstr $input  > $dir/$output 2>&1
+for section in 'forward' 'loss' 'backward' 'optimizer_step'
+do
+    output=output_basic_$section.csv
+    profileargstr="--target-processes all --nvtx --kernel-id :::3 --kernel-name $k --launch-count $lc --metrics $metrics --csv"
+    echo parameter: Baseline
+    echo "ncu $profileargstr $python --section $section $args_basic > $dir/$output 2>&1"
+    ncu $profileargstr $python --section $section $args_basic  > $dir/$output 2>&1
+done
+
+# Optimized
+for section in 'forward' 'loss' 'backward' 'optimizer_step'
+do
+    output=output_optimized_$section.csv
+    profileargstr="--target-processes all --nvtx --kernel-id :::3 --kernel-name $k --launch-count $lc --metrics $metrics --csv"
+    echo parameter: Optimized
+    echo "ncu $profileargstr $python --section $section $args_optimized > $dir/$output 2>&1"
+    ncu $profileargstr $python --section $section $args_optimized  > $dir/$output 2>&1
+done
 
 
 cd $dir
