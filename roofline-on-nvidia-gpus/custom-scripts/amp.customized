@@ -77,7 +77,7 @@ dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
 for section in 'forward' 'loss' 'backward' 'optimizer_step'
 do
     output=output_amp_$section.csv
-    profileargstr="--target-processes all --nvtx --kernel-id :::3 --kernel-name $k --launch-count $lc --metrics $metrics --csv"
+    profileargstr="--target-processes all --nvtx --kernel-id :::3 --launch-count $lc --metrics $metrics --csv"
     echo parameter: Optimized with AMP
     echo "ncu $profileargstr $python --section $section $args_optimized > $dir/$output 2>&1"
     ncu $profileargstr $python --section $section $args_optimized  > $dir/$output 2>&1
