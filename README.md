@@ -21,10 +21,10 @@ Then, install PyTorch 1.5+ and torchvision 0.6+:
 conda create -n detr -c pytorch pytorch torchvision
 conda activate detr
 ```
-Install pycocotools (for evaluation on COCO), nvtx (for annotations) and scipy (for training):
+Install pycocotools (for evaluation on COCO), cuda (for cupy-annotations) and scipy (for training):
 ```
 conda install cython scipy
-conda install conda-forge::nvtx
+conda install cuda -c nvidia
 
 pip install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
 ```
@@ -365,7 +365,6 @@ We actively welcome your pull requests! Please see [CONTRIBUTING.md](.github/CON
 ssh marcolz@saul.nersc.gov
 conda create -n "detr_12.2" python cython pycocotools pytorch torchvision pytorch scipy conda-forge::nvtx -c pytorch -c nvidia
 git clone https://github.com/lorenz369/hgp_detr.git
-git clone https://github.com/lorenz369/gpu_reports.git
 ```
 
 ## recurring:
@@ -428,19 +427,17 @@ rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/GPU1 
 rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts /Users/marcolorenz/Programming/DETR/hgp_detr/roofline-on-nvidia-gpus
 
 ```
-Nsight Systems:
-  nsys-ui report_name.nsys-rep
 
 # Profiling with Coder
 
 ## initial
 ssh coder.DETR.main
 conda install cuda -c nvidia
-conda install nvtx pycocotools -c conda-forge
+conda install pycocotools -c conda-forge
 
 git clone https://github.com/lorenz369/hgp_detr.git
 
-## Find the correct ncu installation path sing the find or locate Command
+## Install ncu
 If you're unsure of the installation path, you can use the find or locate command to search for ncu across your system. Try out all the options to find the correct one and configure the environment in the next step.
 
 Using find:
@@ -475,6 +472,26 @@ Since you've identified the correct `ncu` executable for your system, you should
     ```
 
 This setup ensures that the correct version of `ncu` is available system-wide in any new terminal session.
+
+## training with output_path
+Start new tmux session
+```
+tmux new -s session_name
+```
+Run training with specified output path
+```
+python main.py --batch_size 2 --epochs 300  --backbone resnet18 --enc_layers 2 --dec_layers 2 --dim_feedforward 2048 --hidden_dim 256 --nheads 32 --num_queries 5 --dataset_file hgp --output_dir /home/coder/hgp_detr/checkpoints
+```
+Once training is running, you can detach from the tmux session and safely log off without stopping the training process. To detach, press Ctrl+b followed by d. This command sequence will return you to your original terminal window.
+
+Reattach to training session
+```
+tmux attach -t session_name
+```
+Sync checkpoints
+```
+scp -r coder.DETR.main:/home/coder/hgp_detr/checkpoints /Users/marcolorenz/Programming/DETR/hgp_detr
+```
 
 ## Profiling
 ```
@@ -527,19 +544,3 @@ rsync -avz mlorenz@ceg-octane:/home/mlorenz/octane /Users/marcolorenz/Programmin
 
 # Helpful commands 
 tee, screen or tmux
-
-
-
-
-salloc --nodes 1 --gpus=1 --qos debug --time 00:30:00 --constraint gpu --account=m3930
-cd /global/homes/m/marcolz/DETR/hgp_detr
-export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
-export MASTER_PORT=12345
-dcgmi profile --pause
-
-
-python main.py --epochs 1  --backbone resnet18 --enc_layers 2 --dec_layers 2 --dim_feedforward 512 --hidden_dim 64 --nheads 3 --num_queries 20 --dataset_file hgp
-
-ncu --target-processes all -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu/debug_target_processes python main.py --epochs 1  --backbone resnet18 --enc_layers 2 --dec_layers 2 --dim_feedforward 512 --hidden_dim 64 --nheads 3 --num_queries 20 --dataset_file hgp | tee /global/homes/m/marcolz/DETR/gpu_reports/GPU1/debug_target_processes.txt
-
-ncu -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu/debug_np_target_processes python main.py --epochs 1  --backbone resnet18 --enc_layers 2 --dec_layers 2 --dim_feedforward 512 --hidden_dim 64 --nheads 3 --num_queries 20 --dataset_file hgp | tee /global/homes/m/marcolz/DETR/gpu_reports/GPU1/debug_no_target_processes.txt
