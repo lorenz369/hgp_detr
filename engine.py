@@ -138,7 +138,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
 
 @torch.no_grad()
-def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, output_dir, profiling_section: str = None):
+def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, output_dir, profiling_section: str = None, scaler: torch.cuda.amp.GradScaler = None):
     model.eval()
     criterion.eval()
 
@@ -162,9 +162,12 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
+        scaler = torch.cuda.amp.GradScaler() # Added by Marco Lorenz on April 28th, 2024
+
         if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
-        outputs = model(samples)
+        with torch.cuda.amp.autocast(device_type='cuda', dtype=torch.float16):
+            outputs = model(samples)
         if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStop()
             
