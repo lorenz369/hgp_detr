@@ -482,6 +482,7 @@ Training runs:
 ```
 python main.py --batch_size 2 --epochs 300  --backbone resnet18 --enc_layers 2 --dec_layers 2 --dim_feedforward 2048 --hidden_dim 256 --nheads 32 --num_queries 5 --dataset_file hgp --output_dir /home/coder/hgp_detr/checkpoints
 python main.py --batch_size 2 --epochs 500  --backbone resnet50 --dim_feedforward 2048 --hidden_dim 256 --nheads 32 --num_queries 50 --dataset_file hgp --output_dir /home/coder/hgp_detr/checkpoints/max
+python main.py --batch_size 2 --epochs 500  --backbone resnet34 --dim_feedforward 2048 --hidden_dim 256 --nheads 32 --num_queries 20 --dataset_file hgp --output_dir /home/coder/hgp_detr/checkpoints/nqueries20
 ```
 Once training is running, you can detach from the tmux session and safely log off without stopping the training process. To detach, press Ctrl+b followed by d. This command sequence will return you to your original terminal window.
 
