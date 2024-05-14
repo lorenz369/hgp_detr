@@ -166,7 +166,7 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
 
         if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
-        with torch.cuda.amp.autocast():
+        with torch.cuda.amp.autocast(torch.float32):
             outputs = model(samples)
         if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStop()
