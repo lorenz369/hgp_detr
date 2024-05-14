@@ -166,10 +166,12 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
 
         if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
-        with torch.cuda.amp.autocast(dtype = torch.float64):
+        with torch.cuda.amp.autocast():
             outputs = model(samples)
         if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStop()
+
+        print((success := scaler.is_active), success) # Added by Marco Lorenz on April 28th, 2024
             
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
