@@ -68,7 +68,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         if profiling_section == 'loss': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
 
-        with torch.cuda.amp.autocast(device_type='cuda', dtype=torch.float16, enabled=False):
+        with torch.cuda.amp.autocast(enabled=False, dtype=torch.float16):
             loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
         losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
