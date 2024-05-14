@@ -163,8 +163,6 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        scaler = torch.cuda.amp.GradScaler() # Added by Marco Lorenz on April 28th, 2024
-
         if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
         with torch.cuda.amp.autocast():
@@ -173,8 +171,9 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
             cupy.cuda.runtime.profilerStop()
 
         print('success') # Added by Marco Lorenz on April 28th, 2024
-            
-        loss_dict = criterion(outputs, targets)
+        
+        with torch.cuda.amp.autocast(enabled=True, dtype=torch.float32):
+            loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
 
         # reduce losses over all GPUs for logging purposes
