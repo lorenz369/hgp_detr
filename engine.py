@@ -68,7 +68,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         if profiling_section == 'loss': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
 
-        loss_dict = criterion(outputs, targets)
+        with torch.cuda.amp.autocast(device_type='cuda', dtype=torch.float16, enabled=False)
+            loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
         losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
 
@@ -173,38 +174,38 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
 
         print('success') # Added by Marco Lorenz on April 28th, 2024
             
-        # loss_dict = criterion(outputs, targets)
-        # weight_dict = criterion.weight_dict
+        loss_dict = criterion(outputs, targets)
+        weight_dict = criterion.weight_dict
 
-        # # reduce losses over all GPUs for logging purposes
-        # loss_dict_reduced = utils.reduce_dict(loss_dict)
-        # loss_dict_reduced_scaled = {k: v * weight_dict[k]
-        #                             for k, v in loss_dict_reduced.items() if k in weight_dict}
-        # loss_dict_reduced_unscaled = {f'{k}_unscaled': v
-        #                               for k, v in loss_dict_reduced.items()}
-        # metric_logger.update(loss=sum(loss_dict_reduced_scaled.values()),
-        #                      **loss_dict_reduced_scaled,
-        #                      **loss_dict_reduced_unscaled)
-        # metric_logger.update(class_error=loss_dict_reduced['class_error'])
+        # reduce losses over all GPUs for logging purposes
+        loss_dict_reduced = utils.reduce_dict(loss_dict)
+        loss_dict_reduced_scaled = {k: v * weight_dict[k]
+                                    for k, v in loss_dict_reduced.items() if k in weight_dict}
+        loss_dict_reduced_unscaled = {f'{k}_unscaled': v
+                                      for k, v in loss_dict_reduced.items()}
+        metric_logger.update(loss=sum(loss_dict_reduced_scaled.values()),
+                             **loss_dict_reduced_scaled,
+                             **loss_dict_reduced_unscaled)
+        metric_logger.update(class_error=loss_dict_reduced['class_error'])
 
-        # orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
-        # results = postprocessors['bbox'](outputs, orig_target_sizes)
-        # if 'segm' in postprocessors.keys():
-        #     target_sizes = torch.stack([t["size"] for t in targets], dim=0)
-        #     results = postprocessors['segm'](results, outputs, orig_target_sizes, target_sizes)
-        # res = {target['image_id'].item(): output for target, output in zip(targets, results)}
-        # if coco_evaluator is not None:
-        #     coco_evaluator.update(res)
+        orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
+        results = postprocessors['bbox'](outputs, orig_target_sizes)
+        if 'segm' in postprocessors.keys():
+            target_sizes = torch.stack([t["size"] for t in targets], dim=0)
+            results = postprocessors['segm'](results, outputs, orig_target_sizes, target_sizes)
+        res = {target['image_id'].item(): output for target, output in zip(targets, results)}
+        if coco_evaluator is not None:
+            coco_evaluator.update(res)
 
-        # if panoptic_evaluator is not None:
-        #     res_pano = postprocessors["panoptic"](outputs, target_sizes, orig_target_sizes)
-        #     for i, target in enumerate(targets):
-        #         image_id = target["image_id"].item()
-        #         file_name = f"{image_id:012d}.png"
-        #         res_pano[i]["image_id"] = image_id
-        #         res_pano[i]["file_name"] = file_name
+        if panoptic_evaluator is not None:
+            res_pano = postprocessors["panoptic"](outputs, target_sizes, orig_target_sizes)
+            for i, target in enumerate(targets):
+                image_id = target["image_id"].item()
+                file_name = f"{image_id:012d}.png"
+                res_pano[i]["image_id"] = image_id
+                res_pano[i]["file_name"] = file_name
 
-        #     panoptic_evaluator.update(res_pano)
+            panoptic_evaluator.update(res_pano)
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
