@@ -50,51 +50,51 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
 
-        samples = samples.to(device)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16): # Added by Marco Lorenz on April 2nd, 2024
+            samples = samples.to(device)
+            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        start_time = time.time()  # Added by Marco Lorenz on April 2nd, 2024
+            start_time = time.time()  # Added by Marco Lorenz on April 2nd, 2024
         
-        if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
-            cupy.cuda.runtime.profilerStart()
-        with torch.cuda.amp.autocast(): # Added by Marco Lorenz on April 2nd, 2024
+            if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
+                cupy.cuda.runtime.profilerStart()
             outputs = model(samples)
-        if profiling_section == 'forward': # Added by Marco Lorenz on April 2nd, 2024
-            cupy.cuda.runtime.profilerStop()
+            if profiling_section == 'forward': # Added by Marco Lorenz on April 2nd, 2024
+                cupy.cuda.runtime.profilerStop()
 
-        process_time = time.time() - start_time # Added by Marco Lorenz on April 2nd, 2024
-        total_process_time += process_time # Added by Marco Lorenz on April 2nd, 2024
+            process_time = time.time() - start_time # Added by Marco Lorenz on April 2nd, 2024
+            total_process_time += process_time # Added by Marco Lorenz on April 2nd, 2024
 
-        if profiling_section == 'loss': # Added by Marco Lorenz on April 2nd, 2024
-            cupy.cuda.runtime.profilerStart()
+            if profiling_section == 'loss': # Added by Marco Lorenz on April 2nd, 2024
+                cupy.cuda.runtime.profilerStart()
 
-        with torch.cuda.amp.autocast(enabled=True, dtype=torch.float32):
-            loss_dict = criterion(outputs, targets)
-        weight_dict = criterion.weight_dict
-        losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
+            with torch.cuda.amp.autocast(enabled=True, dtype=torch.float32):
+                loss_dict = criterion(outputs, targets)
+            weight_dict = criterion.weight_dict
+            losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
 
-        # reduce losses over all GPUs for logging purposes
-        loss_dict_reduced = utils.reduce_dict(loss_dict)
-        loss_dict_reduced_unscaled = {f'{k}_unscaled': v
-                                      for k, v in loss_dict_reduced.items()}
-        loss_dict_reduced_scaled = {k: v * weight_dict[k]
-                                    for k, v in loss_dict_reduced.items() if k in weight_dict}
-        losses_reduced_scaled = sum(loss_dict_reduced_scaled.values())
+            # reduce losses over all GPUs for logging purposes
+            loss_dict_reduced = utils.reduce_dict(loss_dict)
+            loss_dict_reduced_unscaled = {f'{k}_unscaled': v
+                                        for k, v in loss_dict_reduced.items()}
+            loss_dict_reduced_scaled = {k: v * weight_dict[k]
+                                        for k, v in loss_dict_reduced.items() if k in weight_dict}
+            losses_reduced_scaled = sum(loss_dict_reduced_scaled.values())
 
-        loss_value = losses_reduced_scaled.item()
+            loss_value = losses_reduced_scaled.item()
 
-        if profiling_section == 'loss': # Added by Marco Lorenz on April 2nd, 2024
-            cupy.cuda.runtime.profilerStop()
+            if profiling_section == 'loss': # Added by Marco Lorenz on April 2nd, 2024
+                cupy.cuda.runtime.profilerStop()
 
-        if not math.isfinite(loss_value):
-            print("Loss is {}, stopping training".format(loss_value))
-            print(loss_dict_reduced)
-            sys.exit(1)
+            if not math.isfinite(loss_value):
+                print("Loss is {}, stopping training".format(loss_value))
+                print(loss_dict_reduced)
+                sys.exit(1)
         
-        loss_time = time.time() - start_time - process_time # Added by Marco Lorenz on April 2nd, 2024
-        total_loss_time += loss_time # Added by Marco Lorenz on April 2nd, 2024
+            loss_time = time.time() - start_time - process_time # Added by Marco Lorenz on April 2nd, 2024
+            total_loss_time += loss_time # Added by Marco Lorenz on April 2nd, 2024
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
         if profiling_section == 'backward': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
@@ -111,13 +111,14 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         if profiling_section == 'optimizer' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStop()
 
-        backward_time = time.time() - start_time - process_time - loss_time  # Added by Marco Lorenz on April 2nd, 2024
-        total_backward_time += backward_time # Added by Marco Lorenz on April 2nd, 2024
-        iterations += 1  # Increment iteration count
+        with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16): # Added by Marco Lorenz on April 2nd, 2024
+            backward_time = time.time() - start_time - process_time - loss_time  # Added by Marco Lorenz on April 2nd, 2024
+            total_backward_time += backward_time # Added by Marco Lorenz on April 2nd, 2024
+            iterations += 1  # Increment iteration count
 
-        metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
-        metric_logger.update(class_error=loss_dict_reduced['class_error'])
-        metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+            metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
+            metric_logger.update(class_error=loss_dict_reduced['class_error'])
+            metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
         scaler.update() # Added by Marco Lorenz on April 2nd, 2024
         
