@@ -426,6 +426,8 @@ rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/GPU1 
 
 rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts /Users/marcolorenz/Programming/DETR/hgp_detr/roofline-on-nvidia-gpus
 
+rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts /Users/marcolorenz/Programming/DETR/gpu_reports/perlmutter/GPU1
+
 ```
 
 # Profiling with Coder
