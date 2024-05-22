@@ -88,7 +88,7 @@ for section in 'forward' 'loss' 'backward' 'optimizer_step'
 do
     output=output_bs4_optimized_$section.csv
     profileargstr="--target-processes all --nvtx --kernel-id :::3 --launch-count $lc --metrics $metrics --csv"
-    echo parameter: Optimized
+    echo parameter: Batch Size "4" Optimized
     echo "ncu $profileargstr $python --section $section --batch_size 4 $args_optimized > $dir/$output 2>&1"
     ncu $profileargstr $python --section $section --batch_size 4 $args_optimized  > $dir/$output 2>&1
 done
