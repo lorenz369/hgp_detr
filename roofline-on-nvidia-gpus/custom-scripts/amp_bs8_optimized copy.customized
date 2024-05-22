@@ -1,0 +1,88 @@
+#!/bin/bash -l
+#SBATCH --constraint=gpu
+#SBATCH --nodes=1
+#SBATCH --gpus=1
+#SBATCH --qos debug
+#SBATCH --time=00:30:00
+#SBATCH --account=m3930
+#SBATCH --output=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/slurm/slurm_%j.out
+
+# --------------------------------------------------------------------------------
+# This file has been modified from its original version. It retains the original
+# copyright notice, terms, and disclaimer as specified in the Lawrence Berkeley 
+# National Labs BSD variant license. The modifications are provided under the same 
+# license terms as the original, with no endorsements from the original authors or 
+# affiliated institutions unless expressly stated.
+# --------------------------------------------------------------------------------
+
+# pre-run
+module load gpu
+module load conda
+conda activate detr_12.2
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=12345
+dcgmi profile --pause
+
+# Time
+metrics="sm__cycles_elapsed.avg,\
+sm__cycles_elapsed.avg.per_second,"
+
+# DP
+metrics+="sm__sass_thread_inst_executed_op_dadd_pred_on.sum,\
+sm__sass_thread_inst_executed_op_dfma_pred_on.sum,\
+sm__sass_thread_inst_executed_op_dmul_pred_on.sum,"
+
+# SP
+metrics+="sm__sass_thread_inst_executed_op_fadd_pred_on.sum,\
+sm__sass_thread_inst_executed_op_ffma_pred_on.sum,\
+sm__sass_thread_inst_executed_op_fmul_pred_on.sum,"
+
+# HP
+metrics+="sm__sass_thread_inst_executed_op_hadd_pred_on.sum,\
+sm__sass_thread_inst_executed_op_hfma_pred_on.sum,\
+sm__sass_thread_inst_executed_op_hmul_pred_on.sum,"
+
+# Tensor Core
+metrics+="sm__inst_executed_pipe_tensor.sum,"
+
+# DRAM, L2 and L1
+metrics+="dram__bytes.sum,\
+lts__t_bytes.sum,\
+l1tex__t_bytes.sum"
+
+# ncu flags
+export lc=100
+
+
+# detr parameters
+
+export epochs=1
+export backbone="resnet18"
+export enc_layers=2
+export dec_layers=2
+export dim_ff=512
+export hidden_dim=64
+export nheads=4
+export queries=20
+export file="hgp"
+
+
+python="python /global/homes/m/marcolz/DETR/hgp_detr/main.py"
+# args_basic=" --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward $dim_ff --hidden_dim $hidden_dim --nheads $nheads --num_queries $queries --dataset_file $file"
+args_optimized=" --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_layers $dec_layers --dim_feedforward 2048 --hidden_dim 256 --nheads 32 --num_queries 5 --dataset_file $file"
+
+dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
+
+# Optimized with AMP
+for section in 'forward' 'loss' 'backward' 'optimizer_step'
+do
+    output=output_bs8_optimized_AMP_$section.csv
+    profileargstr="--target-processes all --nvtx --kernel-id :::3 --launch-count $lc --metrics $metrics --csv"
+    echo parameter: Batch Size "8", Optimized with AMP
+    echo "ncu $profileargstr $python --section $section --batch_size 8 $args_optimized > $dir/$output 2>&1"
+    ncu $profileargstr $python --section $section --batch_size 8 $args_optimized  > $dir/$output 2>&1
+done
+
+
+cd $dir
+srun -n1 python postprocess.py
