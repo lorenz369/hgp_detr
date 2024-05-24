@@ -102,7 +102,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         if profiling_section == 'backward':
             cupy.cuda.runtime.profilerStop() # Added by Marco Lorenz on April 2nd, 2024
 
-        scaler.unscale_(optimizer) # Added by Marco Lorenz on April 2nd, 2024
+        # scaler.unscale_(optimizer) # Added by Marco Lorenz on April 2nd, 2024
         if max_norm > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
         
