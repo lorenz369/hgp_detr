@@ -47,7 +47,7 @@ for bs in 2 8
 do
     output=time_batchsize_$bs.csv
     echo "$input --batch_size $bs > $dir/$output 2>&1"
-    ncu $input --batch_size $bs > $dir/$output 2>&1
+    $input --batch_size $bs > $dir/$output 2>&1
 done
 
 
