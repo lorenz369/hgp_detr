@@ -45,7 +45,7 @@ dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
 
 # Baseline
 output=AMPtimeoutput.txt
-echo $input > $dir/$output 2>&1"
+echo "$input > $dir/$output 2>&1"
 ncu $input  > $dir/$output 2>&1
 
 
