@@ -76,9 +76,9 @@ dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
 # Optimized with AMP
 for section in 'forward' 'loss' 'backward' 'optimizer_step'
 do
-    output=output_bs8_optimized_AMP_$section.csv
+    output=output_bs8_optimized_AMP_unscaled_$section.csv
     profileargstr="--target-processes all --nvtx --kernel-id :::3 --launch-count $lc --metrics $metrics --csv"
-    echo parameter: Batch Size "8", Optimized with AMP
+    echo parameter: Batch Size "8", Optimized with AMP, Unscaled, $section
     echo "ncu $profileargstr $python --section $section --batch_size 8 $args_optimized > $dir/$output 2>&1"
     ncu $profileargstr $python --section $section --batch_size 8 $args_optimized  > $dir/$output 2>&1
 done
