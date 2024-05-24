@@ -21,42 +21,13 @@ module load conda
 conda activate detr_12.2
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=12345
-dcgmi profile --pause
+# dcgmi profile --pause
 
-# Time
-metrics="sm__cycles_elapsed.avg,\
-sm__cycles_elapsed.avg.per_second,"
-
-# DP
-metrics+="sm__sass_thread_inst_executed_op_dadd_pred_on.sum,\
-sm__sass_thread_inst_executed_op_dfma_pred_on.sum,\
-sm__sass_thread_inst_executed_op_dmul_pred_on.sum,"
-
-# SP
-metrics+="sm__sass_thread_inst_executed_op_fadd_pred_on.sum,\
-sm__sass_thread_inst_executed_op_ffma_pred_on.sum,\
-sm__sass_thread_inst_executed_op_fmul_pred_on.sum,"
-
-# HP
-metrics+="sm__sass_thread_inst_executed_op_hadd_pred_on.sum,\
-sm__sass_thread_inst_executed_op_hfma_pred_on.sum,\
-sm__sass_thread_inst_executed_op_hmul_pred_on.sum,"
-
-# Tensor Core
-metrics+="sm__inst_executed_pipe_tensor.sum,"
-
-# DRAM, L2 and L1
-metrics+="dram__bytes.sum,\
-lts__t_bytes.sum,\
-l1tex__t_bytes.sum"
-
-# ncu flags
-export lc=100
 
 
 # detr parameters
 
-export epochs=1
+export epochs=3
 export backbone="resnet18"
 export enc_layers=2
 export dec_layers=2
@@ -73,12 +44,10 @@ input+=" --epochs $epochs --backbone $backbone --enc_layers $enc_layers --dec_la
 dir=/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts
 
 # Baseline
-output=output.csv
-profileargstr="--target-processes all --nvtx --kernel-id :::1 --kernel-name $k --launch-count $lc --metrics $metrics --csv"
-echo parameter: {parameter}
-echo "ncu $profileargstr $input > $dir/$output 2>&1"
-ncu $profileargstr $input  > $dir/$output 2>&1
+output=AMPtimeoutput.txt
+echo $input > $dir/$output 2>&1"
+ncu $input  > $dir/$output 2>&1
 
 
-cd $dir
-srun -n1 python postprocess.py
+# cd $dir
+# srun -n1 python postprocess.py

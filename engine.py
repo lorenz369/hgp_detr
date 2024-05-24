@@ -30,6 +30,7 @@ from datasets.panoptic_eval import PanopticEvaluator
 
 import cupy.cuda.runtime # Added by Marco Lorenz on May 2nd, 2024
 import time # Added by Marco Lorenz on April 2nd, 2024
+import torch.cuda.amp.autocast as autocast # Added by Marco Lorenz on April 2nd, 2024
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -50,7 +51,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
 
-        with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16): # Added by Marco Lorenz on April 2nd, 2024
+        with autocast(enabled=True, dtype=torch.float16): # Added by Marco Lorenz on April 2nd, 2024
             samples = samples.to(device)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
