@@ -1,23 +1,73 @@
 --------------------------------------------------------------------------------
 Modified by Marco Lorenz in April 2024.
-I've forked https://github.com/facebookresearch/detr to apply the detection transformer 
+The following contains a fork of https://github.com/facebookresearch/detr to apply the detection transformer (DETR)
 to the Hands, Guns and Phones dataset (https://paperswithcode.com/dataset/hgp), and to 
 examine and profile its execution.
+
 All modifications are made under the terms of the Apache License 2.0, which is the license
 originally associated with this file and repository. All original copyright, patent, 
 trademark, and attribution notices from the Source form of the Work have been retained, 
 excluding those notices that do not pertain to any part of the Derivative Works.
 --------------------------------------------------------------------------------
 
+# Table of contents
+* [Introduction](#introduction)
+* [DETR - Background](#Background)
+* [Usage - Training with HGP Dataset](#Usage)
+* [Demo - Inference with trained model] (#Demo)
+* [Profiling - Roofline Methodology for Perlmutter](#Profiling)
+
+# Introduction
+If you would like to explore the original DETR and its associated COCO Dataset, please refer to the original repository. For details see [End-to-End Object Detection with Transformers](https://ai.facebook.com/research/publications/end-to-end-object-detection-with-transformers) by Nicolas Carion, Francisco Massa, Gabriel Synnaeve, Nicolas Usunier, Alexander Kirillov, and Sergey Zagoruyko.
+
+This repository presents instructions how to train DETR with the Hands, Guns and Phones dataset, and how to profile it with [Nvidia Nsight Compute](https://developer.nvidia.com/nsight-compute). 
+Furthermore, it includes an extension of the roofline methodology to profile [Nvidia A100 Tensor Core GPUs](https://www.nvidia.com/en-us/data-center/a100/), which is based on [this NERSC repository](https://gitlab.com/NERSC/roofline-on-nvidia-gpus). The profiling scripts and instructions are designed for NERSC's current High-Performance-Computing System, Perlmutter, but can be extended to other systems and GPUs.
+
+For details on the roofline methodology see [Hierarchical Roofline Performance Analysis for Deep Learning Applications](https://arxiv.org/abs/2009.05257) by Charlene Yang, Yunsong Wang, Steven Farrell, Thorsten Kurth, and Samuel Williams
+For details on NERSC and Perlmutter see [Getting started at NERSC](https://docs.nersc.gov/getting-started/).
+
+# Background
+Original documentation of https://github.com/facebookresearch/detr:
+**DE⫶TR**: End-to-End Object Detection with Transformers
+========
+
+[![Support Ukraine](https://img.shields.io/badge/Support-Ukraine-FFD500?style=flat&labelColor=005BBB)](https://opensource.fb.com/support-ukraine)
+
+PyTorch training code and pretrained models for **DETR** (**DE**tection **TR**ansformer).
+We replace the full complex hand-crafted object detection pipeline with a Transformer, and match Faster R-CNN with a ResNet-50, obtaining **42 AP** on COCO using half the computation power (FLOPs) and the same number of parameters. Inference in 50 lines of PyTorch.
+
+![DETR](.github/DETR.png)
+
+**What it is**. Unlike traditional computer vision techniques, DETR approaches object detection as a direct set prediction problem. It consists of a set-based global loss, which forces unique predictions via bipartite matching, and a Transformer encoder-decoder architecture. 
+Given a fixed small set of learned object queries, DETR reasons about the relations of the objects and the global image context to directly output the final set of predictions in parallel. Due to this parallel nature, DETR is very fast and efficient.
+
+**About the code**. We believe that object detection should not be more difficult than classification,
+and should not require complex libraries for training and inference.
+DETR is very simple to implement and experiment with, and we provide a
+[standalone Colab Notebook](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/detr_demo.ipynb)
+showing how to do inference with DETR in only a few lines of PyTorch code.
+Training code follows this idea - it is not a library,
+but simply a [main.py](main.py) importing model and criterion
+definitions with standard training loops.
+
+Additionnally, we provide a Detectron2 wrapper in the d2/ folder. See the readme there for more information.
+
 For details see [End-to-End Object Detection with Transformers](https://ai.facebook.com/research/publications/end-to-end-object-detection-with-transformers) by Nicolas Carion, Francisco Massa, Gabriel Synnaeve, Nicolas Usunier, Alexander Kirillov, and Sergey Zagoruyko.
 
-# Usage - Object detection
+See our [blog post](https://ai.facebook.com/blog/end-to-end-object-detection-with-transformers/) to learn more about end to end object detection with transformers.
+
+# Usage
+
+## Getting started
 There are no extra compiled components in DETR and package dependencies are minimal,
 so the code is very simple to use. We provide instructions how to install dependencies via conda.
 First, clone the repository locally:
 ```
-git clone https://github.com/facebookresearch/detr.git
+git clone https://github.com/lorenz369/hgp_detr.git #--branch amp/no-cupy
 ```
+To test [Automatic Mixed Precision](https://pytorch.org/docs/stable/notes/amp_examples.html) provided by PyTorch, check out branch 'amp'.
+To get rid of the cupy dependency, check out branch 'no_cupy'.
+
 Then, install PyTorch 1.5+ and torchvision 0.6+:
 ```
 conda create -n detr -c pytorch pytorch torchvision
@@ -31,8 +81,6 @@ conda install cuda -c nvidia
 pip install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
 ```
 That's it, should be good to train and evaluate detection models.
-
-Take a look at the detr_hands_on.ipynb. Shows how to load a model from hub, generate predictions, then visualize the attention of the model (similar to the figures of the paper).
 
 
 To train a lightweight example configuration on the HGP dataset (GPU):
@@ -50,7 +98,24 @@ To train a lightweight example configuration on the HGP dataset (CPU):
 python main.py --batch_size 2 --epochs 3  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --device cpu --dataset_file hgp
 ```
 
-# Argument Help
+To obtain a checkpoint at your output_dir:
+```
+python main.py --dataset_file hgp --output_dir /your/output_dir
+```
+
+To resume from previously obtained checkpoint at your input_dir:
+```
+python main.py --dataset_file hgp --resume /your/input_dir
+```
+
+To evaluate a previously trained model at your input_dir:
+```
+python main.py --batch_size 2 --no_aux_loss --eval --dataset_file hgp --resume /your/input_dir
+```
+
+'results/checkpoints' contains a log file of a sample training run.
+
+## Argument Help
 
 | Flag | explanation | default |
 | --------------- | --------------- | --------------- |
@@ -117,260 +182,33 @@ Matcher | explanation | default |
 | --dist_url    | url used to set up distributed training    | 'env://'    |
 
 
-Original documentation of https://github.com/facebookresearch/detr:
-**DE⫶TR**: End-to-End Object Detection with Transformers
-========
+# Demo
 
-[![Support Ukraine](https://img.shields.io/badge/Support-Ukraine-FFD500?style=flat&labelColor=005BBB)](https://opensource.fb.com/support-ukraine)
-
-PyTorch training code and pretrained models for **DETR** (**DE**tection **TR**ansformer).
-We replace the full complex hand-crafted object detection pipeline with a Transformer, and match Faster R-CNN with a ResNet-50, obtaining **42 AP** on COCO using half the computation power (FLOPs) and the same number of parameters. Inference in 50 lines of PyTorch.
-
-![DETR](.github/DETR.png)
-
-**What it is**. Unlike traditional computer vision techniques, DETR approaches object detection as a direct set prediction problem. It consists of a set-based global loss, which forces unique predictions via bipartite matching, and a Transformer encoder-decoder architecture. 
-Given a fixed small set of learned object queries, DETR reasons about the relations of the objects and the global image context to directly output the final set of predictions in parallel. Due to this parallel nature, DETR is very fast and efficient.
-
-**About the code**. We believe that object detection should not be more difficult than classification,
-and should not require complex libraries for training and inference.
-DETR is very simple to implement and experiment with, and we provide a
-[standalone Colab Notebook](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/detr_demo.ipynb)
-showing how to do inference with DETR in only a few lines of PyTorch code.
-Training code follows this idea - it is not a library,
-but simply a [main.py](main.py) importing model and criterion
-definitions with standard training loops.
-
-Additionnally, we provide a Detectron2 wrapper in the d2/ folder. See the readme there for more information.
-
-For details see [End-to-End Object Detection with Transformers](https://ai.facebook.com/research/publications/end-to-end-object-detection-with-transformers) by Nicolas Carion, Francisco Massa, Gabriel Synnaeve, Nicolas Usunier, Alexander Kirillov, and Sergey Zagoruyko.
-
-See our [blog post](https://ai.facebook.com/blog/end-to-end-object-detection-with-transformers/) to learn more about end to end object detection with transformers.
-# Model Zoo
-We provide baseline DETR and DETR-DC5 models, and plan to include more in future.
-AP is computed on COCO 2017 val5k, and inference time is over the first 100 val5k COCO images,
-with torchscript transformer.
-
-<table>
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>name</th>
-      <th>backbone</th>
-      <th>schedule</th>
-      <th>inf_time</th>
-      <th>box AP</th>
-      <th>url</th>
-      <th>size</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>DETR</td>
-      <td>R50</td>
-      <td>500</td>
-      <td>0.036</td>
-      <td>42.0</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth">model</a>&nbsp;|&nbsp;<a href="https://dl.fbaipublicfiles.com/detr/logs/detr-r50_log.txt">logs</a></td>
-      <td>159Mb</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>DETR-DC5</td>
-      <td>R50</td>
-      <td>500</td>
-      <td>0.083</td>
-      <td>43.3</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r50-dc5-f0fb7ef5.pth">model</a>&nbsp;|&nbsp;<a href="https://dl.fbaipublicfiles.com/detr/logs/detr-r50-dc5_log.txt">logs</a></td>
-      <td>159Mb</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>DETR</td>
-      <td>R101</td>
-      <td>500</td>
-      <td>0.050</td>
-      <td>43.5</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r101-2c7b67e5.pth">model</a>&nbsp;|&nbsp;<a href="https://dl.fbaipublicfiles.com/detr/logs/detr-r101_log.txt">logs</a></td>
-      <td>232Mb</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>DETR-DC5</td>
-      <td>R101</td>
-      <td>500</td>
-      <td>0.097</td>
-      <td>44.9</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r101-dc5-a2e86def.pth">model</a>&nbsp;|&nbsp;<a href="https://dl.fbaipublicfiles.com/detr/logs/detr-r101-dc5_log.txt">logs</a></td>
-      <td>232Mb</td>
-    </tr>
-  </tbody>
-</table>
-
-COCO val5k evaluation results can be found in this [gist](https://gist.github.com/szagoruyko/9c9ebb8455610958f7deaa27845d7918).
-
-The models are also available via torch hub,
-to load DETR R50 with pretrained weights simply do:
-```python
-model = torch.hub.load('facebookresearch/detr:main', 'detr_resnet50', pretrained=True)
+Subdirectory 'results' contains 'detr_hands_on.ipynb', which shows how to generate and visualize predictions and the underlying attention mechanisms.
+To run it, you will need to modify the following line:
 ```
-
-
-COCO panoptic val5k models:
-<table>
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>name</th>
-      <th>backbone</th>
-      <th>box AP</th>
-      <th>segm AP</th>
-      <th>PQ</th>
-      <th>url</th>
-      <th>size</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>DETR</td>
-      <td>R50</td>
-      <td>38.8</td>
-      <td>31.1</td>
-      <td>43.4</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r50-panoptic-00ce5173.pth">download</a></td>
-      <td>165Mb</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>DETR-DC5</td>
-      <td>R50</td>
-      <td>40.2</td>
-      <td>31.9</td>
-      <td>44.6</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r50-dc5-panoptic-da08f1b1.pth">download</a></td>
-      <td>165Mb</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>DETR</td>
-      <td>R101</td>
-      <td>40.1</td>
-      <td>33</td>
-      <td>45.1</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r101-panoptic-40021d53.pth">download</a></td>
-      <td>237Mb</td>
-    </tr>
-  </tbody>
-</table>
-
-Checkout our [panoptic colab](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/DETR_panoptic.ipynb)
-to see how to use and visualize DETR's panoptic segmentation prediction.
-
-# Notebooks
-
-We provide a few notebooks in colab to help you get a grasp on DETR:
-* [DETR's hands on Colab Notebook](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/detr_attention.ipynb): Shows how to load a model from hub, generate predictions, then visualize the attention of the model (similar to the figures of the paper)
-* [Standalone Colab Notebook](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/detr_demo.ipynb): In this notebook, we demonstrate how to implement a simplified version of DETR from the grounds up in 50 lines of Python, then visualize the predictions. It is a good starting point if you want to gain better understanding the architecture and poke around before diving in the codebase.
-* [Panoptic Colab Notebook](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/DETR_panoptic.ipynb): Demonstrates how to use DETR for panoptic segmentation and plot the predictions.
-
-
-## Data preparation
-
-Download and extract COCO 2017 train and val images with annotations from
-[http://cocodataset.org](http://cocodataset.org/#download).
-We expect the directory structure to be the following:
+checkpoint = torch.load('/Users/marcolorenz/Programming/DETR/hgp_detr/checkpoints/nqueries20_resnet18/checkpoint0399.pth', map_location='cpu')  # Use 'cuda' if using GPU
 ```
-path/to/coco/
-  annotations/  # annotation json files
-  train2017/    # train images
-  val2017/      # val images
-```
-
-## Training
-To train baseline DETR on a single node with 8 gpus for 300 epochs run:
-```
-python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --coco_path /path/to/coco 
-```
-A single epoch takes 28 minutes, so 300 epoch training
-takes around 6 days on a single machine with 8 V100 cards.
-To ease reproduction of our results we provide
-[results and training logs](https://gist.github.com/szagoruyko/b4c3b2c3627294fc369b899987385a3f)
-for 150 epoch schedule (3 days on a single machine), achieving 39.5/60.3 AP/AP50.
-
-We train DETR with AdamW setting learning rate in the transformer to 1e-4 and 1e-5 in the backbone.
-Horizontal flips, scales and crops are used for augmentation.
-Images are rescaled to have min size 800 and max size 1333.
-The transformer is trained with dropout of 0.1, and the whole model is trained with grad clip of 0.1.
+Please include the path to your own pretrained model obtained in the previous step, and play around with the sample images, or insert your own.
 
 
-## Evaluation
-To evaluate DETR R50 on COCO val5k with a single GPU run:
-```
-python main.py --batch_size 2 --no_aux_loss --eval --resume https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth --coco_path /path/to/coco
-```
-We provide results for all DETR detection models in this
-[gist](https://gist.github.com/szagoruyko/9c9ebb8455610958f7deaa27845d7918).
-Note that numbers vary depending on batch size (number of images) per GPU.
-Non-DC5 models were trained with batch size 2, and DC5 with 1,
-so DC5 models show a significant drop in AP if evaluated with more
-than 1 image per GPU.
+# Profiling
 
-## Multinode training
-Distributed training is available via Slurm and [submitit](https://github.com/facebookincubator/submitit):
-```
-pip install submitit
-```
-Train baseline DETR-6-6 model on 4 nodes for 300 epochs:
-```
-python run_with_submitit.py --timeout 3000 --coco_path /path/to/coco
-```
+A working installation of CUDA and Nvidia Nsight Systems/Compute are prerequisites for profiling successfully.
+Nvidia Nsight Compute in particular is necessary to produce roofline charts for Nvidia GPUs.
+Most experiments associated with this repository were conducted on NERSC-9, Perlmutter. 
+First, we will show the manual commands to conduct experiments on Perlmutter. Second, we will point to scripts to automate these experiments.
+All commands and scripts can be adjusted to different accounts, systems or GPUs.
 
-# Usage - Segmentation
+Happy hacking!
 
-We show that it is relatively straightforward to extend DETR to predict segmentation masks. We mainly demonstrate strong panoptic segmentation results.
-
-## Data preparation
-
-For panoptic segmentation, you need the panoptic annotations additionally to the coco dataset (see above for the coco dataset). You need to download and extract the [annotations](http://images.cocodataset.org/annotations/panoptic_annotations_trainval2017.zip).
-We expect the directory structure to be the following:
-```
-path/to/coco_panoptic/
-  annotations/  # annotation json files
-  panoptic_train2017/    # train panoptic annotations
-  panoptic_val2017/      # val panoptic annotations
-```
-
-## Training
-
-We recommend training segmentation in two stages: first train DETR to detect all the boxes, and then train the segmentation head.
-For panoptic segmentation, DETR must learn to detect boxes for both stuff and things classes. You can train it on a single node with 8 gpus for 300 epochs with:
-```
-python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --coco_path /path/to/coco  --coco_panoptic_path /path/to/coco_panoptic --dataset_file coco_panoptic --output_dir /output/path/box_model
-```
-For instance segmentation, you can simply train a normal box model (or used a pre-trained one we provide).
-
-Once you have a box model checkpoint, you need to freeze it, and train the segmentation head in isolation.
-For panoptic segmentation you can train on a single node with 8 gpus for 25 epochs:
-```
-python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --masks --epochs 25 --lr_drop 15 --coco_path /path/to/coco  --coco_panoptic_path /path/to/coco_panoptic  --dataset_file coco_panoptic --frozen_weights /output/path/box_model/checkpoint.pth --output_dir /output/path/segm_model
-```
-For instance segmentation only, simply remove the `dataset_file` and `coco_panoptic_path` arguments from the above command line.
-
-# License
-DETR is released under the Apache 2.0 license. Please see the [LICENSE](LICENSE) file for more information.
-
-# Contributing
-We actively welcome your pull requests! Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) for more info.
-
-
-# Some sample profiling workflows on different hardware configurations
-
-## Profiling on NERSC-9, Perlmutter
+## Training and Profiling on NERSC-9, Perlmutter
+The following contains sample commands for Perlmutter.
 
 ### initial:
+Please note: A NERSC account is necessary to access Perlmutter. For details on NERSC and Perlmutter see [Getting started at NERSC](https://docs.nersc.gov/getting-started/).
 ```
-ssh marcolz@saul.nersc.gov
+ssh username@saul.nersc.gov
 conda create -n "detr_12.2" python cython pycocotools pytorch torchvision pytorch scipy conda-forge::nvtx -c pytorch -c nvidia
 git clone https://github.com/lorenz369/hgp_detr.git
 ```
@@ -379,13 +217,13 @@ git clone https://github.com/lorenz369/hgp_detr.git
 ```
 module load conda
 conda activate detr_12.2
-cd /global/homes/m/marcolz/DETR/hgp_detr
+cd /global/your/path/to/hgp_detr
 ```
 
 ### Profiling of 1 GPU
 ```
-salloc --nodes 1 --gpus=1 --qos debug --time 00:20:00 --constraint gpu --account=m3930
-cd /global/homes/m/marcolz/DETR/hgp_detr
+salloc --nodes 1 --gpus=1 --qos debug --time 00:20:00 --constraint gpu --account=myAccount
+cd /global/your/path/to/hgp_detr
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=12345
 dcgmi profile --pause
@@ -393,24 +231,21 @@ dcgmi profile --pause
 
 Nsight Systems
 ```
-srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU1/nsys/__report_name__ --force-overwrite true python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
-| tee ../output/perlmutter_1gpu.txt  
+srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU1/nsys/__report_name__ --force-overwrite true python main.py --epochs 1  --backbone resnet18 --dataset_file hgp
+| tee your/path/log.txt 
 ```
 
 Nsight Compute
 ```
-ncu --target-processes all  -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/ncu/perlmutter1 python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /global/homes/m/marcolz/DETR/gpu_reports/GPU1/perlmutter1.txt
+ncu --target-processes all  -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=your/path/file python main.py --epochs 1 --dataset_file hgp | tee your/path/log.txt
 
-ncu  -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/home/coder/coder/ncu/__report_name__ python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /home/coder/coder/txt/coder.txt
-```
-
-
- 
+ncu  -k regex:elementwise --launch-skip 10 --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=your/path/file python main.py --epochs 1 --dataset_file hgp | tee your/path/log.txt
+``` 
 
 ### Profiling of 2 GPUs
 ```
-salloc --nodes 1 --gpus=2 --qos debug --time 00:15:00 --constraint gpu --account=m3930
-cd /global/homes/m/marcolz/DETR/hgp_detr
+salloc --nodes 1 --gpus=2 --qos debug --time 00:15:00 --constraint gpu --account=myAccount
+cd /global/your/path/to/hgp_detr
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=12345
 dcgmi profile --pause
@@ -418,109 +253,90 @@ dcgmi profile --pause
 
 Nsight Systems
 ```
-srun nsys profile --stats=true -t nvtx,cuda --output=../gpu_reports/perlmutter/GPU2/nsys/__report_name__ --force-overwrite true python -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
-| tee ../output/perlmutter_2gpu.txt  
+srun nsys profile --stats=true -t nvtx,cuda --output=your/path/file --force-overwrite true python -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1 --dataset_file hgp
+| tee tee your/path/log.txt
 ```
 
 Nsight Compute
 ```
-srun ncu --export=../gpu_reports/perlmutter/GPU2/ncu/__report_name__ --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg python main.py -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp
-| tee ../output/perlmutter_2gpu.txt      
+srun ncu --export=your/path/file--set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg python main.py -m torch.distributed.launch --nproc_per_node=2 --use_env main.py --epochs 1 --dataset_file hgp
+| tee tee your/path/log.txt    
 ```
 
 ### Output Sync
 ```
-rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/gpu_reports/GPU1 /Users/marcolorenz/Programming/DETR/gpu_reports/perlmutter
-
-rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts /Users/marcolorenz/Programming/DETR/hgp_detr/roofline-on-nvidia-gpus
-
-rsync -avz marcolz@saul.nersc.gov:/global/homes/m/marcolz/DETR/hgp_detr/roofline-on-nvidia-gpus/custom-scripts /Users/marcolorenz/Programming/DETR/gpu_reports/perlmutter/GPU1
+rsync -avz username@saul.nersc.gov:/global/homes/u/username/dir /Users/marcolorenz/Programming/DETR/gpu_reports/perlmutter
 
 ```
 
-## Profiling with Coder
+## Roofline Charts
+'roofline-on-nvidia-gpus/custom-scripts' contains python scripts for producing roofline charts with csv output files obtained from profiling runs with Nvidia Nsight Compute.
+'Postprocess.py' contains a parsing scripts from csv data to a Pandas DataFrame. To produce roofline charts, it will then hand these DataFrames to roofline function. 
+There are two predefined functions available: 'roofline.py' for basic roofline charts, and 'roofline_pu.py' for more information processing units. They can also be used as a starting point for own function definitions.
 
-### initial
-ssh coder.DETR.main
-conda install cuda -c nvidia
-conda install pycocotools -c conda-forge
 
-git clone https://github.com/lorenz369/hgp_detr.git
+To run simple execute 'postprocess.py' in a directory containing one or multiple files that read 'output....csv', or adjust the script to meet your own requirements.
 
-### Install ncu
-If you're unsure of the installation path, you can use the find or locate command to search for ncu across your system. Try out all the options to find the correct one and configure the environment in the next step.
-
-Using find:
+Adjust the following line to process different directories:
 ```
-sudo find / -name ncu 2>/dev/null
+datadir="."
 ```
 
-### Set the Correct `ncu` Path Permanently
-
-Since you've identified the correct `ncu` executable for your system, you should configure your environment to use this path by default.
-
-### Update `.bashrc` or `.bash_profile`
-
-1. **Open Your Configuration File**: Open your `.bashrc` or `.bash_profile` in a text editor. You can use `nano` for a simple text editing experience:
-
-    ```bash
-    nano ~/.bashrc  # or ~/.bash_profile
-    ```
-
-2. **Add the `ncu` Path**: Add the following line at the end of the file to update your `PATH` environment variable:
-
-    ```bash
-    export PATH="/opt/miniconda/envs/DL/nsight-compute/2024.1.1/target/linux-desktop-glibc_2_11_3-x64:$PATH"
-    ```
-
-3. **Save and Exit**: Save your changes and exit the editor. If you are using `nano`, you can press `Ctrl + O` to write the changes, press `Enter` to confirm, and then `Ctrl + X` to exit.
-
-4. **Activate the Changes**: To make the changes take effect, source your updated configuration file:
-
-    ```bash
-    source ~/.bashrc  # or source ~/.bash_profile
-    ```
-
-This setup ensures that the correct version of `ncu` is available system-wide in any new terminal session.
-
-### training with output_path
-Start new tmux session
+Adjust the following lines to produce different types of roofline charts, or to call your own function:
 ```
-tmux new -s session_name
-```
-Training runs:
-```
-python main.py --batch_size 2 --epochs 300  --backbone resnet18 --enc_layers 2 --dec_layers 2 --dim_feedforward 2048 --hidden_dim 256 --nheads 32 --num_queries 5 --dataset_file hgp --output_dir /home/coder/hgp_detr/checkpoints
-python main.py --batch_size 2 --epochs 500  --backbone resnet50 --dim_feedforward 2048 --hidden_dim 256 --nheads 32 --num_queries 50 --dataset_file hgp --output_dir /home/coder/hgp_detr/checkpoints/max
-python main.py --batch_size 2 --epochs 500  --backbone resnet34 --dim_feedforward 2048 --hidden_dim 256 --nheads 32 --num_queries 20 --dataset_file hgp --output_dir /home/coder/hgp_detr/checkpoints/nqueries20
-```
-Once training is running, you can detach from the tmux session and safely log off without stopping the training process. To detach, press Ctrl+b followed by d. This command sequence will return you to your original terminal window.
+from roofline_pu import roofline_pu
 
-Reattach to training session
-```
-tmux attach -t session_name
-```
-Sync checkpoints
-```
-scp -r coder.DETR.main:/home/coder/hgp_detr/checkpoints /Users/marcolorenz/Programming/DETR/hgp_detr
+roofline_pu(title, FLOPS, AI, AIHBM, AIL2, AIL1, LABELS, PU, flag)
 ```
 
-### Profiling
+## Automating Roofline Profiling
+
+'roofline-on-nvidia-gpus/custom-scripts' furthermore contains a set of scripts to profile and compare different aspects of DETR like hyperparameters, or sections of the training loop.
+These scripts are designed for a 'slurm' scheduled system like Perlmutter with a preconfigured conda environment.
+
+At the very least, you will need to modify the first lines specifying the slurm parameters, particularly the account and the output directory:
 ```
-cd /home/coder/hgp_detr
+#!/bin/bash -l
+#SBATCH --constraint=gpu
+#SBATCH --nodes=1
+#SBATCH --gpus=1
+#SBATCH --qos debug
+#SBATCH --time=00:30:00
+#SBATCH --account=m3930
+#SBATCH --output=/global/homes/m/marcolz/DETR/gpu_reports/GPU1/slurm/slurm_%j.out
 ```
 
-Nsight Compute
+Next, run with:
 ```
-ncu --range-filter :0:[5] --nvtx --nvtx-include rng -k regex:elementwise --launch-count 10 --set default --section SourceCounters --metrics smsp__cycles_active.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,gpu__time_duration.avg --export=/home/coder/coder/ncu/__report_name__ python main.py --epochs 1  --backbone resnet18 --enc_layers 1 --dec_layers 1 --dim_feedforward 512 --hidden_dim 64 --nheads 2 --num_queries 5 --dataset_file hgp | tee /home/coder/coder/txt/coder.txt      
-```
-
-### Output Sync
-```
-rsync -avz /home/coder/coder /Users/marcolorenz/Programming/DETR/gpu_reports
+sbatch myscript.sh
 ```
 
-## Profiling on Octane
+To watch execution, optionally run
+```
+watch -n 3 sqs
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Training on Octane (Private cluster of Heidelberg University, not externally accessible)
 
 ### initial:
 ```
@@ -552,7 +368,3 @@ nsys profile -o /home/mlorenz/octane/dev/nsys/__report_name__ --stats=true -t nv
 ```
 rsync -avz mlorenz@ceg-octane:/home/mlorenz/octane /Users/marcolorenz/Programming/DETR/gpu_reports
 ```
-    
-
-## Helpful commands 
-tee, screen or tmux

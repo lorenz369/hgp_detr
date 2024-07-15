@@ -35,7 +35,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
     # Source: https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/
     l2_roof = 2996.77 * 2.3
     memRoofs = [('L1', 54000.), ('L2', l2_roof),  ('HBM', 1555)] 
-    cmpRoofs = [('TF32 Tensor', 155.9), ('FP32', 19.5), ('FP16', 78)]
+    cmpRoofs = [('TF32 Tensor', 155.9), ('FP64', 9.7), ('FP32', 19.5), ('FP16', 78)]
 
     fig = plt.figure(1,figsize=(10.67,6.6))
     plt.clf()
@@ -88,7 +88,6 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
         y = x * roof
         ax.plot(x[:smem_ix_elbow[i]+1],y[:smem_ix_elbow[i]+1],c='k',ls='-',lw='2')
 
-
     for i in range(len(AIHBM)):
         if flag == 'L1':
             ax.plot(float(AIL1[i]),float(FLOPS[i]),c=colors[i%10],marker=styles[0],\
@@ -111,7 +110,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
                     markeredgewidth=markerwidth,label=LABELS[i] if LABELS else "unknown")
             ax.plot(float(AIHBM[i]),float(FLOPS[i]),c=colors[i%10],marker=styles[2],\
                     linestyle='None',ms=markersize,markerfacecolor='none',\
-                    markeredgewidth=markerwidth,label=LABELS[i] if LABELS else "unknown")
+                    markeredgewidth=markerwidth,label=LABELS[i] if LABELS else "unknown")        
 
     marker_handles = []  
 
@@ -127,7 +126,12 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
     elif flag == 'all':
         for i in range(len(memRoofs)):
             marker_handles.append(ax.plot([],[],c='k',marker=styles[i],linestyle='None',ms=markersize,\
-                                  markerfacecolor='none',markeredgewidth=markerwidth,label=memRoofs[i][0])[0])            
+                                  markerfacecolor='none',markeredgewidth=markerwidth,label=memRoofs[i][0])[0])
+    elif flag == 'PU':
+        labels = ['FP16', 'FP32', 'FP64', 'TC', 'CC', 'TC/CC']
+        for i in range(6):
+            marker_handles.append(ax.plot([],[],c='k',marker=styles[i],linestyle='None',ms=markersize,\
+                    markerfacecolor='none',markeredgewidth=markerwidth,label=labels[i])[0])         
 
 
     for roof in cmpRoofs:
@@ -172,7 +176,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
     # leg2 = plt.legend(handles = patch_handles,loc=4,ncol=1,bbox_to_anchor = (1,0.1),scatterpoints = 1)
 
     # ax.text(xlim[0]*1.1,ylim[1]/1.1, '-'.join([filename,flag]), horizontalalignment='left',verticalalignment='top')
-#     plt.title('-'.join([filename,flag]))
+    # plt.title('-'.join([filename,flag]))
 
     plt.savefig('_'.join([filename,flag])+'.png')
 #     plt.savefig('_'.join([filename,flag])+'.eps')
