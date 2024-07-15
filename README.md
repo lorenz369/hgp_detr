@@ -14,7 +14,7 @@ excluding those notices that do not pertain to any part of the Derivative Works.
 * [Introduction](#introduction)
 * [DETR - Background](#Background)
 * [Usage - Training with HGP Dataset](#Usage)
-* [Demo - Inference with trained model] (#Demo)
+* [Demo - Inference with trained model](#demo)
 * [Profiling - Roofline Methodology for Perlmutter](#Profiling)
 
 # Introduction
