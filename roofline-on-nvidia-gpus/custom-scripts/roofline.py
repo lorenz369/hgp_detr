@@ -34,7 +34,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
 
     # Source: https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/
     l2_roof = 2996.77 * 2.3
-    memRoofs = [('L1', 54000.), ('L2', l2_roof),  ('HBM', 1555)] 
+    memRoofs = [('L1', 54000.), ('L2', l2_roof),  ('HBM', 1555)]
     cmpRoofs = [('TF32 Tensor', 155.9), ('FP64', 9.7), ('FP32', 19.5), ('FP16', 78)]
 
     fig = plt.figure(1,figsize=(10.67,6.6))
@@ -46,7 +46,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
     ax.set_ylabel('Performance [GFLOP/sec]')
 
     nx   = 10000
-    xmin = -3 
+    xmin = -3
     xmax = 3
     ymin = 1
     ymax = 165000
@@ -110,9 +110,9 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
                     markeredgewidth=markerwidth,label=LABELS[i] if LABELS else "unknown")
             ax.plot(float(AIHBM[i]),float(FLOPS[i]),c=colors[i%10],marker=styles[2],\
                     linestyle='None',ms=markersize,markerfacecolor='none',\
-                    markeredgewidth=markerwidth,label=LABELS[i] if LABELS else "unknown")        
+                    markeredgewidth=markerwidth,label=LABELS[i] if LABELS else "unknown")
 
-    marker_handles = []  
+    marker_handles = []
 
     if flag == 'L1':
         marker_handles.append(ax.plot([],[],c='k',marker=styles[0],linestyle='None',ms=markersize,\
@@ -131,7 +131,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
         labels = ['FP16', 'FP32', 'FP64', 'TC', 'CC', 'TC/CC']
         for i in range(6):
             marker_handles.append(ax.plot([],[],c='k',marker=styles[i],linestyle='None',ms=markersize,\
-                    markerfacecolor='none',markeredgewidth=markerwidth,label=labels[i])[0])         
+                    markerfacecolor='none',markeredgewidth=markerwidth,label=labels[i])[0])
 
 
     for roof in cmpRoofs:
@@ -164,7 +164,7 @@ def roofline(filename, FLOPS, AIHBM, AIL2=None, AIL1=None, LABELS=None, flag='HB
               rotation=180/np.pi*ang)
 
 
-        
+
     leg1 = plt.legend(handles = marker_handles,loc='lower right', ncol=len(flag[0]) if 'all' not in flag else 3,bbox_to_anchor = (1,0))
     ax.add_artist(leg1)
 
