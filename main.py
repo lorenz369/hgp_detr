@@ -13,10 +13,8 @@
 
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 import argparse
-import datetime
 import json
 import random
-import time
 from pathlib import Path
 
 import numpy as np
@@ -217,9 +215,6 @@ def main(args):
             utils.save_on_master(coco_evaluator.coco_eval["bbox"].eval, output_dir / "eval.pth")
         return
 
-    print("Start training")
-    start_time = time.time()
-
     scaler = torch.cuda.amp.GradScaler(enabled=args.use_amp) # Added by Marco Lorenz on April 28th, 2024
 
     for epoch in range(args.start_epoch, args.epochs):
@@ -268,11 +263,6 @@ def main(args):
                     for name in filenames:
                         torch.save(coco_evaluator.coco_eval["bbox"].eval,
                                 output_dir / "eval" / name)
-
-        total_time = time.time() - start_time
-        total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-        print('Training time {}'.format(total_time_str))
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])

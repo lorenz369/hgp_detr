@@ -123,10 +123,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         if profiling_section == 'optimizer' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStop()
 
-        backward_time = time.time() - start_time - process_time - loss_time  # Added by Marco Lorenz on April 2nd, 2024
-        total_backward_time += backward_time # Added by Marco Lorenz on April 2nd, 2024
-        iterations += 1  # Increment iteration count
-
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
