@@ -218,6 +218,8 @@ def main(args):
     scaler = torch.cuda.amp.GradScaler(enabled=args.use_amp) # Added by Marco Lorenz on April 28th, 2024
     if args.use_amp:
         print("Using mixed precision training")
+    else:
+        print("Using full precision training")
 
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
