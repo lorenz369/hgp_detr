@@ -1,13 +1,13 @@
 # --------------------------------------------------------------------------------
 # Modified by Marco Lorenz in April 2024.
-# - Added the option to sample a random subset of the dataset for faster training 
+# - Added the option to sample a random subset of the dataset for faster training
 #   when using the --fast_dev_run flag
-# - Added the option to profile the forward pass, loss computation, backward pass, or 
+# - Added the option to profile the forward pass, loss computation, backward pass, or
 #   optimizer step using the --section flag
 # - Added the GradScaler to the training loop to enable mixed precision training
 # This modification is made under the terms of the Apache License 2.0, which is the license
 # originally associated with this file. All original copyright, patent, trademark, and
-# attribution notices from the Source form of the Work have been retained, excluding those 
+# attribution notices from the Source form of the Work have been retained, excluding those
 # notices that do not pertain to any part of the Derivative Works.
 # --------------------------------------------------------------------------------
 
@@ -117,6 +117,7 @@ def get_args_parser():
                         help='fraction of dataset to use for training and testing')
     parser.add_argument('--section', default=None, type=str, choices=('forward', 'loss', 'backward', 'optimizer_step', 'all'),
                         help='Section of the training loop to profile')
+    parser.add_argument('--use_amp', action='store_true', help='Use mixed precision training')
     return parser
 
 
@@ -219,7 +220,7 @@ def main(args):
     print("Start training")
     start_time = time.time()
 
-    scaler = torch.cuda.amp.GradScaler() # Added by Marco Lorenz on April 28th, 2024
+    scaler = torch.cuda.amp.GradScaler(enabled=args.use_amp) # Added by Marco Lorenz on April 28th, 2024
 
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:

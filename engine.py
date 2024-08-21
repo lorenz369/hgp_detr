@@ -1,15 +1,19 @@
 # --------------------------------------------------------------------------------
 # Modified by Marco Lorenz in 2024.
-# Changes made: 
+# Changes made:
 # Added CuPy profiler to the training loop in line 65 to profile the backwards computation.
 # Added support of the Hands, Guns and Phones dataset (HGP), including the following
 # - import of the build_evaluator method to support the HGP dataset in line 24
 # - call of the build_evaluator method to support the HGP dataset in line 88
 # - added the 'profiling_section' parameter to the train_one_epoch and evaluate methods to support profiling
 # - added Automatic Mixed Precision (AMP) support to the train_one_epoch method
+# - added the 'scaler' parameter to the train_one_epoch method to support AMP
+# - added the 'scaler' parameter to the evaluate method to support AMP
+# - added the 'profiling_section' parameter to the evaluate method to support profiling
+# - added timing utilites
 # This modification is made under the terms of the Apache License 2.0, which is the license
 # originally associated with this file. All original copyright, patent, trademark, and
-# attribution notices from the Source form of the Work have been retained, excluding those 
+# attribution notices from the Source form of the Work have been retained, excluding those
 # notices that do not pertain to any part of the Derivative Works.
 # --------------------------------------------------------------------------------
 
@@ -30,6 +34,25 @@ from datasets.panoptic_eval import PanopticEvaluator
 
 import cupy.cuda.runtime # Added by Marco Lorenz on May 2nd, 2024
 import time # Added by Marco Lorenz on April 2nd, 2024
+import gc # Added by Marco Lorenz on Aug 21st, 2024
+
+def start_timer(): # Added by Marco Lorenz on Aug 21st, 2024
+    global start_time
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.reset_max_memory_allocated()
+    torch.cuda.synchronize()
+    start_time = time.time()
+
+def end_timer_and_print(local_msg): # Added by Marco Lorenz on Aug 21st, 2024
+    torch.cuda.synchronize()
+    end_time = time.time()
+    print("\n" + local_msg)
+    print("Total execution time = {:.3f} sec".format(end_time - start_time))
+    print("Max memory used by tensors = {} bytes".format(torch.cuda.max_memory_allocated()))
+    print("Max memory cached = {} bytes".format(torch.cuda.max_memory_cached()))
+    print("Total memory reserved = {} bytes".format(torch.cuda.memory_reserved()))
+    print("Total memory allocated = {} bytes".format(torch.cuda.memory_allocated()))
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -42,11 +65,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
-    # Time accumulators added by Marco Lorenz on April 2nd, 2024
-    total_process_time = 0
-    total_loss_time = 0
-    total_backward_time = 0
-    iterations = 0
+    start_timer()  # Added by Marco Lorenz on Aug 21st, 2024
 
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
 
@@ -54,16 +73,11 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             samples = samples.to(device)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-            start_time = time.time()  # Added by Marco Lorenz on April 2nd, 2024
-        
             if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
                 cupy.cuda.runtime.profilerStart()
             outputs = model(samples)
             if profiling_section == 'forward': # Added by Marco Lorenz on April 2nd, 2024
                 cupy.cuda.runtime.profilerStop()
-
-            process_time = time.time() - start_time # Added by Marco Lorenz on April 2nd, 2024
-            total_process_time += process_time # Added by Marco Lorenz on April 2nd, 2024
 
             if profiling_section == 'loss': # Added by Marco Lorenz on April 2nd, 2024
                 cupy.cuda.runtime.profilerStart()
@@ -90,9 +104,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                 print("Loss is {}, stopping training".format(loss_value))
                 print(loss_dict_reduced)
                 sys.exit(1)
-        
-            loss_time = time.time() - start_time - process_time # Added by Marco Lorenz on April 2nd, 2024
-            total_loss_time += loss_time # Added by Marco Lorenz on April 2nd, 2024
 
             optimizer.zero_grad()
 
@@ -105,7 +116,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         # scaler.unscale_(optimizer) # Added by Marco Lorenz on April 2nd, 2024
         if max_norm > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
-        
+
         if profiling_section == 'optimizer': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStart()
         scaler.step(optimizer) # Added by Marco Lorenz on April 2nd, 2024
@@ -121,21 +132,12 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
         scaler.update() # Added by Marco Lorenz on April 2nd, 2024
-        
-
-
-    # Average the accumulated times, added by Marco Lorenz on April 2nd, 2024
-    avg_process_time = total_process_time / iterations
-    avg_loss_time = total_loss_time / iterations
-    avg_backward_time = total_backward_time / iterations
-
-    print(f"Average processing time per iteration: {avg_process_time:.6f} seconds")
-    print(f"Average loss computation time per iteration: {avg_loss_time:.6f} seconds")
-    print(f"Average backward pass time per iteration: {avg_backward_time:.6f} seconds")
+        optimizer.zero_grad() # Added by Marco Lorenz on Aug 21, 2024
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
+    end_timer_and_print("End of training epoch") # Added by Marco Lorenz on Aug 21st, 2024
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 
@@ -170,7 +172,7 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
             outputs = model(samples)
         if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
             cupy.cuda.runtime.profilerStop()
-        
+
         with torch.cuda.amp.autocast(enabled=True, dtype=torch.float32):
             loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
