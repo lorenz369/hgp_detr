@@ -56,7 +56,7 @@ def end_timer_and_print(local_msg): # Added by Marco Lorenz on Aug 21st, 2024
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
-                    device: torch.device, epoch: int, max_norm: float = 0, profiling_section: str = None, scaler: torch.cuda.amp.GradScaler = None):
+                    device: torch.device, epoch: int, max_norm: float = 0, profiling_section: str = None, scaler: torch.cuda.amp.GradScaler = None, use_amp: bool = False):
     model.train()
     criterion.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -69,13 +69,14 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
 
-        with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16): # Added by Marco Lorenz on April 2nd, 2024
+        with torch.cuda.amp.autocast(enabled=use_amp, dtype=torch.float16): # Added by Marco Lorenz on April 2nd, 2024
             samples = samples.to(device)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
             if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
                 cupy.cuda.runtime.profilerStart()
             outputs = model(samples)
+            print(f'Output dtype: {outputs.dtype}')
             if profiling_section == 'forward': # Added by Marco Lorenz on April 2nd, 2024
                 cupy.cuda.runtime.profilerStop()
 
