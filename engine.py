@@ -76,6 +76,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             if profiling_section == 'forward' or profiling_section == 'all': # Added by Marco Lorenz on April 2nd, 2024
                 cupy.cuda.runtime.profilerStart()
             outputs = model(samples)
+            print(f"Logits type: {output["pred_logits"].dtype}")
+            print(f"Boxes type: {output["pred_boxes"].dtype}")
             if profiling_section == 'forward': # Added by Marco Lorenz on April 2nd, 2024
                 cupy.cuda.runtime.profilerStop()
 
