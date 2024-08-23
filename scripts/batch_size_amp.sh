@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --gpus=1
 #SBATCH --qos debug
-#SBATCH --time=00:59:00
+#SBATCH --time=00:30:00
 #SBATCH --account=m2845
 #SBATCH --output=/global/homes/m/marcolz/DETR/batch_size_%j.out
 
