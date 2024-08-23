@@ -4,7 +4,7 @@
 #SBATCH --gpus=1
 #SBATCH --qos debug
 #SBATCH --time=00:59:00
-#SBATCH --account=ntrain3
+#SBATCH --account=m2845
 #SBATCH --output=/global/homes/m/marcolz/DETR/batch_size_%j.out
 
 python="python /global/homes/m/marcolz/DETR/hgp_detr/main.py"
