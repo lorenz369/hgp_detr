@@ -1,0 +1,17 @@
+| distributed init (rank 0): env://
+git:
+  sha: 017073257028dc0f557aa64b9ce7145045932825, status: clean, branch: amp
+
+Namespace(lr=0.0001, lr_backbone=1e-05, batch_size=128, weight_decay=0.0001, epochs=3, lr_drop=200, clip_max_norm=0.1, frozen_weights=None, backbone='resnet50', dilation=False, position_embedding='sine', enc_layers=6, dec_layers=6, dim_feedforward=2048, hidden_dim=256, dropout=0.1, nheads=8, num_queries=100, pre_norm=False, masks=False, aux_loss=True, set_cost_class=1, set_cost_bbox=5, set_cost_giou=2, mask_loss_coef=1, dice_loss_coef=1, bbox_loss_coef=5, giou_loss_coef=2, eos_coef=0.1, dataset_file='hgp', coco_path=None, coco_panoptic_path=None, remove_difficult=False, output_dir='', device='cuda', seed=42, resume='', start_epoch=0, eval=False, num_workers=2, world_size=1, dist_url='env://', fast_dev_run=None, section=None, use_amp=False, rank=0, gpu=0, distributed=True, dist_backend='nccl')
+number of params: 41284121
+Dataset-root specified: /global/u2/m/marcolz/DETR/hgp_detr/HGP
+loading annotations into memory...
+Done (t=0.02s)
+creating index...
+index created!
+Dataset-root specified: /global/u2/m/marcolz/DETR/hgp_detr/HGP
+loading annotations into memory...
+Done (t=0.01s)
+creating index...
+index created!
+Using full precision training
