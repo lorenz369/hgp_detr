@@ -216,13 +216,17 @@ def main(args):
         return
 
     scaler = torch.cuda.amp.GradScaler(enabled=args.use_amp) # Added by Marco Lorenz on April 28th, 2024
+    if args.use_amp:
+        print("Using mixed precision training")
+    else:
+        print("Using full precision training")
 
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
             model, criterion, data_loader_train, optimizer, device, epoch,
-            args.clip_max_norm, args.section, scaler) # Added args.section and scaler by Marco Lorenz on April 28th, 2024
+            args.clip_max_norm, args.section, scaler, args.use_amp) # Added args.section and scaler by Marco Lorenz on April 28th, 2024
         lr_scheduler.step()
 
         if args.output_dir:
